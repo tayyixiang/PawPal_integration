@@ -2,8 +2,9 @@
 @using Microsoft.EntityFrameworkCore
 @using PawPal_integration.Domain
 @using PawPal_integration.Data
+@using PawPal_integration.Components.Layout
 @inject PawPalContext Context
-@layout PawPal_integration.Components.Layout.MainLayout
+@layout MainLayout
 
 <PageTitle>Browse Pets</PageTitle>
 
@@ -13,9 +14,6 @@
             <div>
                 <h1 class="mb-2 fw-bold">Browse Pets</h1>
                 <p class="text-muted mb-0">Explore adoptable pets from trusted shelters.</p>
-            </div>
-            <div class="kpi-pill px-3 py-2 text-muted small">
-                Showing <span class="fw-semibold">@((Pets?.Count ?? 0))</span> available pets
             </div>
         </div>
     </div>

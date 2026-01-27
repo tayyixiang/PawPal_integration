@@ -4,14 +4,14 @@
 @using PawPal_integration.Domain
 @using PawPal_integration.Data
 @inject PawPalContext Context
-@attribute [Authorize]
+@attribute [Authorize(Roles = "Administrator")]
 
-<PageTitle>Index</PageTitle>
+<PageTitle>Admin - Manage Pets</PageTitle>
 
-<h1>Index</h1>
+<h1>Manage Pets</h1>
 
 <p>
-    <a href="pets/create">Create New</a>
+    <a href="pets/create" class="btn btn-primary">Create New</a>
 </p>
 
 @if (Pets == null)
@@ -26,11 +26,7 @@ else
                 <th>Image</th>
                 <th>Name</th>
                 <th>Breed</th>
-                <th>Age</th>
-                <th>Gender</th>
-                <th>Color</th>
-                <th>Shelter</th>
-                <th>Created By</th>
+                <th>Status</th>
                 <th></th>
             </tr>
         </thead>
@@ -39,21 +35,11 @@ else
             {
                 <tr>
                     <td>
-                        <a class="btn btn-sm btn-success me-2" href="@($"apply?petId={pet.Id}")">Adopt</a>
-
-                        <a href="@($"pets/edit?id={pet.Id}")">Edit</a> |
-                        <a href="@($"pets/details?id={pet.Id}")">Details</a> |
-                        <a href="@($"pets/delete?id={pet.Id}")">Delete</a>
+                        <img src="@(string.IsNullOrEmpty(pet.ImageUrl) ? "https://placehold.co/100" : pet.ImageUrl)" width="50" height="50" style="object-fit:cover" />
                     </td>
                     <td>@pet.Name</td>
                     <td>@pet.Breed</td>
-                    <td>@pet.Age</td>
-                    <td>@pet.Gender</td>
-                    <td>@pet.Color</td>
-                    <td>
-                        @(pet.Shelter != null ? pet.Shelter.Name : "No Shelter")
-                    </td>
-                    <td>@pet.CreatedBy</td>
+                    <td>Available</td>
                     <td>
                         <a href="@($"pets/edit?id={pet.Id}")">Edit</a> |
                         <a href="@($"pets/details?id={pet.Id}")">Details</a> |
@@ -66,13 +52,8 @@ else
 }
 
 @code {
-    private List<Pet> Pets;
+    // Fix: Initialize list to prevent CS8618 warning
+    private List<Pet> Pets = new();
 
-    protected override async Task OnInitializedAsync()
-    {
-        // We use .Include to fetch the related Shelter data
-        Pets = await Context.Pets
-            .Include(p => p.Shelter)
-            .ToListAsync();
-    }
+    protected override async Task OnInitializedAsync() => Pets = await Context.Pets.ToListAsync();
 }

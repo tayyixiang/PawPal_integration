@@ -1,0 +1,84 @@
+﻿@page "/apply"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using PawPal_integration.Domain
+@using PawPal_integration.Data
+@inject PawPalContext Context
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@attribute [Authorize]
+
+<PageTitle>Apply</PageTitle>
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">Adoption Application</div>
+                <div class="card-body">
+                    <EditForm Model="Application" OnValidSubmit="SubmitApplication" FormName="applyForm">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary class="text-danger" />
+
+                        <div class="mb-3">
+                            <label>Full Name</label>
+                            <InputText @bind-Value="Application.FullName" class="form-control" />
+                        </div>
+                        <div class="mb-3">
+                            <label>Phone</label>
+                            <InputText @bind-Value="Application.PhoneNumber" class="form-control" />
+                        </div>
+                        <div class="mb-3">
+                            <label>Address</label>
+                            <InputTextArea @bind-Value="Application.Address" class="form-control" />
+                        </div>
+                        <div class="mb-3">
+                            <label>Housing Type</label>
+                            <InputSelect @bind-Value="Application.HousingType" class="form-control">
+                                <option value="">Select...</option>
+                                <option value="HDB">HDB</option>
+                                <option value="Condo">Condo</option>
+                                <option value="Landed">Landed</option>
+                            </InputSelect>
+                        </div>
+                        <div class="mb-3">
+                            <label>Caregiver</label>
+                            <InputText @bind-Value="Application.PrimaryCaregiver" class="form-control" />
+                        </div>
+                        <div class="mb-3">
+                            <label>Reason</label>
+                            <InputTextArea @bind-Value="Application.ReasonForAdoption" class="form-control" />
+                        </div>
+
+                        <button type="submit" class="btn btn-success w-100">Submit Application</button>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery] public int PetId { get; set; }
+    [SupplyParameterFromForm] public AdoptionApplication Application { get; set; } = new();
+
+    private async Task SubmitApplication()
+    {
+        var auth = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = auth.User.Identity?.Name ?? "Unknown";
+
+        // Manual Validation for required string fields
+        Application.PrimaryCaregiver ??= "Self";
+        Application.ReasonForAdoption ??= "Love pets";
+
+        Application.PetId = PetId;
+        Application.AdopterId = auth.User.FindFirst(u => u.Type.Contains("nameidentifier"))?.Value ?? user;
+        Application.Status = "Pending";
+        Application.CreatedBy = user;
+        Application.UpdatedBy = user;
+
+        Context.AdoptionApplications.Add(Application);
+        await Context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/my-applications");
+    }
+}

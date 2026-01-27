@@ -1,9 +1,10 @@
 ﻿@page "/pets/{Id:int}"
 @using PawPal_integration.Domain
 @using PawPal_integration.Data
+@using PawPal_integration.Components.Layout
 @using Microsoft.EntityFrameworkCore
 @inject PawPalContext Context
-@layout PawPal_integration.Components.Layout.MainLayout
+@layout MainLayout
 
 <PageTitle>Pet Details</PageTitle>
 
@@ -32,7 +33,6 @@
 
                 <div class="card bg-light border-0 p-3">
                     <h5>Adopt Me!</h5>
-                    <p class="small text-muted">Think you are a good match?</p>
                     <a class="btn btn-success btn-lg w-100" href="@($"/apply?petId={Pet.Id}")">Apply to Adopt</a>
                 </div>
             </div>
