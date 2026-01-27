@@ -1,0 +1,47 @@
+﻿@page "/pets/{Id:int}"
+@using PawPal_integration.Domain
+@using PawPal_integration.Data
+@using Microsoft.EntityFrameworkCore
+@inject PawPalContext Context
+@layout PawPal_integration.Components.Layout.MainLayout
+
+<PageTitle>Pet Details</PageTitle>
+
+<div class="container py-4">
+    <a href="/pets" class="text-decoration-none mb-3 d-inline-block">&larr; Back to Browse</a>
+
+    @if (Pet == null)
+    {
+        <div class="alert alert-warning">Pet not found.</div>
+    }
+    else
+    {
+        <div class="row g-4">
+            <div class="col-md-6">
+                <img class="details-img shadow-sm w-100 rounded"
+                     src="@(string.IsNullOrEmpty(Pet.ImageUrl) ? "https://placehold.co/600x400?text=No+Image" : Pet.ImageUrl)" />
+            </div>
+            <div class="col-md-6">
+                <h1 class="fw-bold">@Pet.Name</h1>
+                <p class="text-muted">@Pet.Breed • @Pet.Age years old</p>
+                <hr />
+                <div class="mb-4">
+                    <h5>About</h5>
+                    <p>@Pet.Description</p>
+                </div>
+
+                <div class="card bg-light border-0 p-3">
+                    <h5>Adopt Me!</h5>
+                    <p class="small text-muted">Think you are a good match?</p>
+                    <a class="btn btn-success btn-lg w-100" href="@($"/apply?petId={Pet.Id}")">Apply to Adopt</a>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private Pet? Pet;
+    protected override async Task OnInitializedAsync() => Pet = await Context.Pets.FirstOrDefaultAsync(p => p.Id == Id);
+}

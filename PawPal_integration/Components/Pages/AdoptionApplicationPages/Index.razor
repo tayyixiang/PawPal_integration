@@ -1,60 +1,66 @@
-﻿@page "/adoptionapplications"
+﻿@page "/admin/applications"
+@using Microsoft.AspNetCore.Authorization
 @using Microsoft.EntityFrameworkCore
-@using Microsoft.AspNetCore.Components.QuickGrid
 @using PawPal_integration.Domain
 @using PawPal_integration.Data
-@implements IAsyncDisposable
-@inject IDbContextFactory<PawPal_integration.Data.PawPalContext> DbFactory
+@inject PawPalContext Context
+@attribute [Authorize(Roles = "Administrator")]
 
-<PageTitle>Index</PageTitle>
+<PageTitle>Adoption Applications</PageTitle>
 
-<h1>Index</h1>
+<div class="container py-4">
+    <h2 class="fw-bold mb-4">Adoption Applications</h2>
 
-<p>
-    <a href="adoptionapplications/create">Create New</a>
-</p>
-
-<QuickGrid Class="table" Items="context.AdoptionApplications">
-    <PropertyColumn Property="adoptionapplication => adoptionapplication.PetId" />
-    <PropertyColumn Property="adoptionapplication => adoptionapplication.AdopterId" />
-    <PropertyColumn Property="adoptionapplication => adoptionapplication.ReviewedByAdminId" />
-    <PropertyColumn Property="adoptionapplication => adoptionapplication.ApplicationDate" />
-    <PropertyColumn Property="adoptionapplication => adoptionapplication.Status" />
-    <PropertyColumn Property="adoptionapplication => adoptionapplication.Remarks" />
-    <PropertyColumn Property="adoptionapplication => adoptionapplication.FullName" />
-    <PropertyColumn Property="adoptionapplication => adoptionapplication.PhoneNumber" />
-    <PropertyColumn Property="adoptionapplication => adoptionapplication.Address" />
-    <PropertyColumn Property="adoptionapplication => adoptionapplication.HousingType" />
-    <PropertyColumn Property="adoptionapplication => adoptionapplication.HasLandlordOrFamilyApproval" />
-    <PropertyColumn Property="adoptionapplication => adoptionapplication.AnyoneAllergic" />
-    <PropertyColumn Property="adoptionapplication => adoptionapplication.AvgHoursAlone" />
-    <PropertyColumn Property="adoptionapplication => adoptionapplication.CurrentlyOwnPets" />
-    <PropertyColumn Property="adoptionapplication => adoptionapplication.CurrentPetsDetails" />
-    <PropertyColumn Property="adoptionapplication => adoptionapplication.PetExperienceDetails" />
-    <PropertyColumn Property="adoptionapplication => adoptionapplication.ReasonForAdoption" />
-    <PropertyColumn Property="adoptionapplication => adoptionapplication.PrimaryCaregiver" />
-    <PropertyColumn Property="adoptionapplication => adoptionapplication.PreparedForVetCare" />
-    <PropertyColumn Property="adoptionapplication => adoptionapplication.AdminRemarks" />
-    <PropertyColumn Property="adoptionapplication => adoptionapplication.ReviewedDateTime" />
-    <PropertyColumn Property="adoptionapplication => adoptionapplication.DateCreated" />
-    <PropertyColumn Property="adoptionapplication => adoptionapplication.DateUpdated" />
-    <PropertyColumn Property="adoptionapplication => adoptionapplication.CreatedBy" />
-    <PropertyColumn Property="adoptionapplication => adoptionapplication.UpdatedBy" />
-
-    <TemplateColumn Context="adoptionapplication">
-        <a href="@($"adoptionapplications/edit?id={adoptionapplication.Id}")">Edit</a> |
-        <a href="@($"adoptionapplications/details?id={adoptionapplication.Id}")">Details</a> |
-        <a href="@($"adoptionapplications/delete?id={adoptionapplication.Id}")">Delete</a>
-    </TemplateColumn>
-</QuickGrid>
+    @if (Apps == null)
+    {
+        <p>Loading...</p>
+    }
+    else
+    {
+        <div class="card shadow-sm border-0">
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date</th>
+                            <th>Applicant</th>
+                            <th>Pet</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Apps)
+                        {
+                            <tr>
+                                <td>@item.ApplicationDate.ToShortDateString()</td>
+                                <td>@item.FullName</td>
+                                <td>@(item.Pet?.Name ?? "Unknown")</td>
+                                <td>
+                                    <span class="badge @(item.Status == "Pending" ? "bg-warning text-dark" : item.Status == "Approved" ? "bg-success" : "bg-danger")">
+                                        @item.Status
+                                    </span>
+                                </td>
+                                <td>
+                                    <a href="admin/applications/review/@item.Id" class="btn btn-sm btn-primary">Review</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
 
 @code {
-    private PawPalContext context = default!;
+    private List<AdoptionApplication> Apps;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        context = DbFactory.CreateDbContext();
+        Apps = await Context.AdoptionApplications
+            .Include(a => a.Pet)
+            .OrderByDescending(a => a.ApplicationDate)
+            .ToListAsync();
     }
-
-    public async ValueTask DisposeAsync() => await context.DisposeAsync();
 }

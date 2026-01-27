@@ -1,0 +1,53 @@
+﻿@page "/pets"
+@using Microsoft.EntityFrameworkCore
+@using PawPal_integration.Domain
+@using PawPal_integration.Data
+@inject PawPalContext Context
+@layout PawPal_integration.Components.Layout.MainLayout
+
+<PageTitle>Browse Pets</PageTitle>
+
+<div class="container py-4">
+    <div class="page-header p-4 p-md-5 mb-4">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3">
+            <div>
+                <h1 class="mb-2 fw-bold">Browse Pets</h1>
+                <p class="text-muted mb-0">Explore adoptable pets from trusted shelters.</p>
+            </div>
+            <div class="kpi-pill px-3 py-2 text-muted small">
+                Showing <span class="fw-semibold">@((Pets?.Count ?? 0))</span> available pets
+            </div>
+        </div>
+    </div>
+
+    @if (Pets == null)
+    {
+        <p class="text-muted">Loading...</p>
+    }
+    else
+    {
+        <div class="row g-4">
+            @foreach (var p in Pets)
+            {
+                <div class="col-12 col-sm-6 col-lg-4">
+                    <div class="card pet-card h-100 shadow-sm">
+                        <img class="pet-img" src="@(string.IsNullOrEmpty(p.ImageUrl) ? "https://placehold.co/600x400?text=No+Image" : p.ImageUrl)" alt="Pet photo" />
+                        <div class="card-body">
+                            <h5 class="mb-1 fw-semibold">@p.Name</h5>
+                            <div class="text-muted small">@p.Breed • @p.Age years</div>
+                            <p class="text-muted small mt-3">@(p.Description?.Length > 100 ? p.Description.Substring(0, 100) + "..." : p.Description)</p>
+                        </div>
+                        <div class="card-footer bg-white border-0 pb-3 px-3">
+                            <a class="btn btn-success w-100" href="@($"/pets/{p.Id}")">View Details</a>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<Pet>? Pets;
+    protected override async Task OnInitializedAsync() => Pets = await Context.Pets.ToListAsync();
+}

@@ -1,0 +1,85 @@
+﻿@page "/admin/applications/review/{Id:int}"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using PawPal_integration.Domain
+@using PawPal_integration.Data
+@inject PawPalContext Context
+@inject NavigationManager Nav
+@inject AuthenticationStateProvider Auth
+@attribute [Authorize(Roles = "Administrator")]
+
+<PageTitle>Review Application</PageTitle>
+
+<div class="container py-4">
+    <a href="/admin/applications" class="btn btn-outline-secondary mb-3">&larr; Back</a>
+
+    @if (App == null)
+    {
+        <p>Loading...</p>
+    }
+    else
+    {
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Applicant Details: @App.FullName</h5>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row">
+                            <dt class="col-sm-4">Phone</dt>
+                            <dd class="col-sm-8">@App.PhoneNumber</dd>
+                            <dt class="col-sm-4">Housing</dt>
+                            <dd class="col-sm-8">@App.HousingType</dd>
+                            <dt class="col-sm-4">Reason</dt>
+                            <dd class="col-sm-8">@App.ReasonForAdoption</dd>
+                            <dt class="col-sm-4">Experience</dt>
+                            <dd class="col-sm-8">@App.PetExperienceDetails</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h5>Decision</h5>
+                        <p class="text-muted">Current Status: <strong>@App.Status</strong></p>
+
+                        <div class="mb-3">
+                            <label>Admin Remarks</label>
+                            <textarea class="form-control" @bind="App.AdminRemarks"></textarea>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-success" @onclick='() => SetStatus("Approved")'>Approve</button>
+                            <button class="btn btn-danger" @onclick='() => SetStatus("Rejected")'>Reject</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private AdoptionApplication? App;
+
+    protected override async Task OnInitializedAsync()
+    {
+        App = await Context.AdoptionApplications.Include(a => a.Pet).FirstOrDefaultAsync(a => a.Id == Id);
+    }
+
+    private async Task SetStatus(string status)
+    {
+        if (App == null) return;
+        App.Status = status;
+
+        var authState = await Auth.GetAuthenticationStateAsync();
+        App.ReviewedByAdminId = authState.User.Identity?.Name;
+        App.ReviewedDateTime = DateTime.Now;
+
+        await Context.SaveChangesAsync();
+        Nav.NavigateTo("/admin/applications");
+    }
+}

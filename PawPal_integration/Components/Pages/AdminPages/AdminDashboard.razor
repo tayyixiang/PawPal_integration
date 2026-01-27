@@ -1,0 +1,71 @@
+﻿@page "/admin/dashboard"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using PawPal_integration.Domain
+@using PawPal_integration.Data
+@inject PawPalContext Context
+@attribute [Authorize(Roles = "Administrator")]
+
+<PageTitle>Admin Dashboard</PageTitle>
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-0">Admin Dashboard</h2>
+            <p class="text-muted mb-0">Overview of shelter activity.</p>
+        </div>
+        <div>
+            <a href="admin/pets" class="btn btn-outline-primary me-2">Manage Pets</a>
+            <a href="shelters" class="btn btn-outline-primary">Manage Shelters</a>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small">Pending Apps</div>
+                        <div class="h2 fw-bold mb-0">@PendingCount</div>
+                    </div>
+                    <i class="bi bi-hourglass-split fs-1 text-warning"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small">Approved</div>
+                        <div class="h2 fw-bold mb-0">@ApprovedCount</div>
+                    </div>
+                    <i class="bi bi-check-circle fs-1 text-success"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small">Total Pets</div>
+                        <div class="h2 fw-bold mb-0">@TotalPets</div>
+                    </div>
+                    <i class="bi bi-heart fs-1 text-danger"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private int PendingCount;
+    private int ApprovedCount;
+    private int TotalPets;
+
+    protected override async Task OnInitializedAsync()
+    {
+        PendingCount = await Context.AdoptionApplications.CountAsync(a => a.Status == "Pending");
+        ApprovedCount = await Context.AdoptionApplications.CountAsync(a => a.Status == "Approved");
+        TotalPets = await Context.Pets.CountAsync();
+    }
+}
