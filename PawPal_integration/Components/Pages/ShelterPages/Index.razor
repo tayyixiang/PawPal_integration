@@ -6,13 +6,15 @@
 @inject PawPalContext Context
 @attribute [Authorize]
 
-<PageTitle>Index</PageTitle>
+<PageTitle>Shelters</PageTitle>
 
-<h1>Index</h1>
+<h1>Shelters</h1>
 
-<p>
-    <a href="shelters/create">Create New</a>
-</p>
+<AuthorizeView Roles="Administrator">
+    <p>
+        <a href="shelters/create" class="btn btn-primary">Create New</a>
+    </p>
+</AuthorizeView>
 
 @if (Shelters == null)
 {
@@ -25,25 +27,21 @@ else
             <tr>
                 <th>Name</th>
                 <th>Address</th>
-                <th>Contact</th>
-                <th>Email</th>
-                <th>Created By</th>
-                <th></th>
+                <th>Actions</th>
             </tr>
         </thead>
         <tbody>
-            @foreach (var item in Shelters)
+            @foreach (var shelter in Shelters)
             {
                 <tr>
-                    <td>@item.Name</td>
-                    <td>@item.Address</td>
-                    <td>@item.ContactNumber</td>
-                    <td>@item.Email</td>
-                    <td>@item.CreatedBy</td>
+                    <td>@shelter.Name</td>
+                    <td>@shelter.Address</td>
                     <td>
-                        <a href="@($"shelters/edit?id={item.Id}")">Edit</a> |
-                        <a href="@($"shelters/details?id={item.Id}")">Details</a> |
-                        <a href="@($"shelters/delete?id={item.Id}")">Delete</a>
+                        <a href="@($"shelters/details?id={shelter.Id}")">Details</a>
+                        <AuthorizeView Roles="Administrator">
+                            | <a href="@($"shelters/edit?id={shelter.Id}")">Edit</a> |
+                            <a href="@($"shelters/delete?id={shelter.Id}")">Delete</a>
+                        </AuthorizeView>
                     </td>
                 </tr>
             }
@@ -52,11 +50,10 @@ else
 }
 
 @code {
-    private List<Shelter> Shelters;
+    private List<Shelter> Shelters = new();
 
     protected override async Task OnInitializedAsync()
     {
-        // Fetch all shelters simply and efficiently
         Shelters = await Context.Shelters.ToListAsync();
     }
 }

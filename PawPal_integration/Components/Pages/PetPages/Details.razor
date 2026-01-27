@@ -1,68 +1,39 @@
-﻿@page "/pets/details"
+﻿@page "/admin/pets/details"
 @using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Authorization
 @using PawPal_integration.Domain
-@inject IDbContextFactory<PawPal_integration.Data.PawPalContext> DbFactory
+@using PawPal_integration.Data
+@inject PawPalContext Context
 @inject NavigationManager NavigationManager
+@attribute [Authorize(Roles = "Administrator")]
 
-<PageTitle>Details</PageTitle>
+<h3>Admin Pet Details</h3>
 
-<h1>Details</h1>
-
-<div>
-    <h2>Pet</h2>
-    <hr />
-    @if (pet is null)
-    {
-        <p><em>Loading...</em></p>
-    }
-    else {
-        <dl class="row">
-            <dt class="col-sm-2">Name</dt>
-            <dd class="col-sm-10">@pet.Name</dd>
-            <dt class="col-sm-2">Breed</dt>
-            <dd class="col-sm-10">@pet.Breed</dd>
-            <dt class="col-sm-2">Age</dt>
-            <dd class="col-sm-10">@pet.Age</dd>
-            <dt class="col-sm-2">Gender</dt>
-            <dd class="col-sm-10">@pet.Gender</dd>
-            <dt class="col-sm-2">Color</dt>
-            <dd class="col-sm-10">@pet.Color</dd>
-            <dt class="col-sm-2">ImageUrl</dt>
-            <dd class="col-sm-10">@pet.ImageUrl</dd>
-            <dt class="col-sm-2">Description</dt>
-            <dd class="col-sm-10">@pet.Description</dd>
-            <dt class="col-sm-2">ShelterId</dt>
-            <dd class="col-sm-10">@pet.ShelterId</dd>
-            <dt class="col-sm-2">DateCreated</dt>
-            <dd class="col-sm-10">@pet.DateCreated</dd>
-            <dt class="col-sm-2">DateUpdated</dt>
-            <dd class="col-sm-10">@pet.DateUpdated</dd>
-            <dt class="col-sm-2">CreatedBy</dt>
-            <dd class="col-sm-10">@pet.CreatedBy</dd>
-            <dt class="col-sm-2">UpdatedBy</dt>
-            <dd class="col-sm-10">@pet.UpdatedBy</dd>
-        </dl>
-        <div>
-            <a href="@($"/pets/edit?id={pet.Id}")">Edit</a> |
-            <a href="@($"/pets")">Back to List</a>
-        </div>
-    }
-</div>
+@if (Pet is null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <dl class="row">
+        <dt class="col-sm-2">Name</dt>
+        <dd class="col-sm-10">@Pet.Name</dd>
+        <dt class="col-sm-2">Breed</dt>
+        <dd class="col-sm-10">@Pet.Breed</dd>
+    </dl>
+    <div>
+        <a href="admin/pets/edit?id=@Pet.Id">Edit</a> |
+        <a href="admin/pets">Back to List</a>
+    </div>
+}
 
 @code {
-    private Pet? pet;
-
-    [SupplyParameterFromQuery]
-    private int Id { get; set; }
+    [SupplyParameterFromQuery] public int Id { get; set; }
+    private Pet? Pet;
 
     protected override async Task OnInitializedAsync()
     {
-        using var context = DbFactory.CreateDbContext();
-        pet = await context.Pets.FirstOrDefaultAsync(m => m.Id == Id);
-
-        if (pet is null)
-        {
-            NavigationManager.NavigateTo("notfound");
-        }
+        Pet = await Context.Pets.FirstOrDefaultAsync(m => m.Id == Id);
+        if (Pet is null) NavigationManager.NavigateTo("notfound");
     }
 }

@@ -1,6 +1,6 @@
 ﻿@page "/admin/applications"
-@using Microsoft.AspNetCore.Authorization
 @using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Authorization
 @using PawPal_integration.Domain
 @using PawPal_integration.Data
 @inject PawPalContext Context
@@ -54,7 +54,8 @@
 </div>
 
 @code {
-    private List<AdoptionApplication> Apps;
+    // FIX: Initialize to avoid warning
+    private List<AdoptionApplication> Apps = new();
 
     protected override async Task OnInitializedAsync()
     {

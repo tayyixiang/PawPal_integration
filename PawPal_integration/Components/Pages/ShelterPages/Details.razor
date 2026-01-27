@@ -1,58 +1,51 @@
 ﻿@page "/shelters/details"
 @using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Authorization
 @using PawPal_integration.Domain
-@inject IDbContextFactory<PawPal_integration.Data.PawPalContext> DbFactory
+@using PawPal_integration.Data
+@inject PawPalContext Context
 @inject NavigationManager NavigationManager
+@attribute [Authorize]
 
-<PageTitle>Details</PageTitle>
+<PageTitle>Shelter Details</PageTitle>
 
-<h1>Details</h1>
+<h1>Shelter Details</h1>
 
 <div>
-    <h2>Shelter</h2>
     <hr />
-    @if (shelter is null)
+    @if (Shelter is null)
     {
         <p><em>Loading...</em></p>
     }
-    else {
+    else
+    {
         <dl class="row">
             <dt class="col-sm-2">Name</dt>
-            <dd class="col-sm-10">@shelter.Name</dd>
+            <dd class="col-sm-10">@Shelter.Name</dd>
+
             <dt class="col-sm-2">Address</dt>
-            <dd class="col-sm-10">@shelter.Address</dd>
-            <dt class="col-sm-2">ContactNumber</dt>
-            <dd class="col-sm-10">@shelter.ContactNumber</dd>
-            <dt class="col-sm-2">Email</dt>
-            <dd class="col-sm-10">@shelter.Email</dd>
-            <dt class="col-sm-2">DateCreated</dt>
-            <dd class="col-sm-10">@shelter.DateCreated</dd>
-            <dt class="col-sm-2">DateUpdated</dt>
-            <dd class="col-sm-10">@shelter.DateUpdated</dd>
-            <dt class="col-sm-2">CreatedBy</dt>
-            <dd class="col-sm-10">@shelter.CreatedBy</dd>
-            <dt class="col-sm-2">UpdatedBy</dt>
-            <dd class="col-sm-10">@shelter.UpdatedBy</dd>
+            <dd class="col-sm-10">@Shelter.Address</dd>
         </dl>
         <div>
-            <a href="@($"/shelters/edit?id={shelter.Id}")">Edit</a> |
-            <a href="@($"/shelters")">Back to List</a>
+            <AuthorizeView Roles="Administrator">
+                <a href="@($"shelters/edit?id={Shelter.Id}")">Edit</a> |
+            </AuthorizeView>
+            <a href="/shelters">Back to List</a>
         </div>
     }
 </div>
 
 @code {
-    private Shelter? shelter;
+    private Shelter? Shelter;
 
     [SupplyParameterFromQuery]
     private int Id { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
-        using var context = DbFactory.CreateDbContext();
-        shelter = await context.Shelters.FirstOrDefaultAsync(m => m.Id == Id);
+        Shelter = await Context.Shelters.FirstOrDefaultAsync(m => m.Id == Id);
 
-        if (shelter is null)
+        if (Shelter is null)
         {
             NavigationManager.NavigateTo("notfound");
         }

@@ -9,41 +9,28 @@
 <PageTitle>Admin - Manage Pets</PageTitle>
 
 <h1>Manage Pets</h1>
-
-<p>
-    <a href="pets/create" class="btn btn-primary">Create New</a>
-</p>
+<p><a href="admin/pets/create" class="btn btn-primary">Create New</a></p>
 
 @if (Pets == null)
 {
-    <p><em>Loading...</em></p>
+    <p>Loading...</p>
 }
 else
 {
     <table class="table">
         <thead>
-            <tr>
-                <th>Image</th>
-                <th>Name</th>
-                <th>Breed</th>
-                <th>Status</th>
-                <th></th>
-            </tr>
+            <tr><th>Name</th><th>Breed</th><th>Actions</th></tr>
         </thead>
         <tbody>
             @foreach (var pet in Pets)
             {
                 <tr>
-                    <td>
-                        <img src="@(string.IsNullOrEmpty(pet.ImageUrl) ? "https://placehold.co/100" : pet.ImageUrl)" width="50" height="50" style="object-fit:cover" />
-                    </td>
                     <td>@pet.Name</td>
                     <td>@pet.Breed</td>
-                    <td>Available</td>
                     <td>
-                        <a href="@($"pets/edit?id={pet.Id}")">Edit</a> |
-                        <a href="@($"pets/details?id={pet.Id}")">Details</a> |
-                        <a href="@($"pets/delete?id={pet.Id}")">Delete</a>
+                        <a href="admin/pets/edit?id=@pet.Id">Edit</a> |
+                        <a href="admin/pets/details?id=@pet.Id">Details</a> |
+                        <a href="admin/pets/delete?id=@pet.Id">Delete</a>
                     </td>
                 </tr>
             }
@@ -52,8 +39,6 @@ else
 }
 
 @code {
-    // Fix: Initialize list to prevent CS8618 warning
     private List<Pet> Pets = new();
-
     protected override async Task OnInitializedAsync() => Pets = await Context.Pets.ToListAsync();
 }

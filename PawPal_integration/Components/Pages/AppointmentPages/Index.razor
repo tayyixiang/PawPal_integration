@@ -6,12 +6,12 @@
 @inject PawPalContext Context
 @attribute [Authorize]
 
-<PageTitle>Index</PageTitle>
+<PageTitle>Appointments</PageTitle>
 
-<h1>Index</h1>
+<h1>Appointments</h1>
 
 <p>
-    <a href="appointments/create">Create New</a>
+    <a href="appointments/create" class="btn btn-primary">Book New</a>
 </p>
 
 @if (Appointments == null)
@@ -24,10 +24,9 @@ else
         <thead>
             <tr>
                 <th>Date</th>
-                <th>Status</th>
                 <th>Pet</th>
-                <th>Application ID</th>
-                <th>Created By</th>
+                <th>Shelter</th>
+                <th>Status</th>
                 <th></th>
             </tr>
         </thead>
@@ -35,15 +34,13 @@ else
             @foreach (var item in Appointments)
             {
                 <tr>
-                    <td>@item.AppointmentDate.ToShortDateString()</td>
+                    <td>@item.AppointmentDate.ToString("g")</td>
+
+                    <td>@(item.Pet?.Name ?? "Unknown")</td>
+
+                    <td>@(item.Pet?.Shelter?.Name ?? "Unknown")</td>
+
                     <td>@item.Status</td>
-                    <td>
-                        @(item.Pet != null ? item.Pet.Name : "Unknown Pet")
-                    </td>
-                    <td>
-                        @(item.AdoptionApplicationId.HasValue? item.AdoptionApplicationId.Value.ToString() : "N/A")
-                    </td>
-                    <td>@item.CreatedBy</td>
                     <td>
                         <a href="@($"appointments/edit?id={item.Id}")">Edit</a> |
                         <a href="@($"appointments/details?id={item.Id}")">Details</a> |
@@ -56,13 +53,13 @@ else
 }
 
 @code {
-    private List<Appointment> Appointments;
+    private List<Appointment> Appointments = new();
 
     protected override async Task OnInitializedAsync()
     {
-        // Use .Include to fetch related Pet data
         Appointments = await Context.Appointments
             .Include(a => a.Pet)
+                .ThenInclude(p => p.Shelter) // Load Pet first, then Shelter
             .ToListAsync();
     }
 }

@@ -1,6 +1,6 @@
 ﻿@page "/my-applications"
-@using Microsoft.AspNetCore.Authorization
 @using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Authorization
 @using PawPal_integration.Domain
 @using PawPal_integration.Data
 @inject PawPalContext Context
@@ -27,6 +27,7 @@
                     <th>Pet</th>
                     <th>Date</th>
                     <th>Status</th>
+                    <th>Action</th>
                 </tr>
             </thead>
             <tbody>
@@ -38,6 +39,9 @@
                         <td>
                             <span class="badge @(app.Status == "Approved" ? "bg-success" : "bg-warning text-dark")">@app.Status</span>
                         </td>
+                        <td>
+                            <a href="@($"my-applications/{app.Id}")" class="btn btn-sm btn-info">View</a>
+                        </td>
                     </tr>
                 }
             </tbody>
@@ -46,7 +50,6 @@
 </div>
 
 @code {
-    // Fix: Initialize the list to prevent CS8618 warning
     private List<AdoptionApplication> Apps = new();
 
     protected override async Task OnInitializedAsync()

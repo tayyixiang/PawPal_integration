@@ -1,18 +1,16 @@
-﻿@page "/pets/edit"
-@using Microsoft.AspNetCore.Authorization
+﻿@page "/admin/pets/edit"
 @using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Authorization
 @using PawPal_integration.Domain
 @using PawPal_integration.Data
 @inject PawPalContext Context
 @inject NavigationManager NavigationManager
-@inject AuthenticationStateProvider AuthenticationStateProvider
-@attribute [Authorize]
+@attribute [Authorize(Roles = "Administrator")]
 
 <PageTitle>Edit Pet</PageTitle>
 
-<h1>Edit</h1>
+<h1>Edit Pet</h1>
 
-<h4>Pet</h4>
 <hr />
 @if (Pet is null)
 {
@@ -22,69 +20,34 @@ else
 {
     <div class="row">
         <div class="col-md-4">
-            <EditForm method="post" Model="Pet" OnValidSubmit="UpdatePet" FormName="edit" Enhance>
+            <EditForm Method="Post" Model="Pet" OnValidSubmit="UpdatePet" FormName="edit" Enhance>
                 <DataAnnotationsValidator />
-                <ValidationSummary role="alert" />
-
+                <ValidationSummary />
                 <input type="hidden" name="Pet.Id" value="@Pet.Id" />
 
                 <div class="mb-3">
                     <label for="name" class="form-label">Name:</label>
                     <InputText id="name" @bind-Value="Pet.Name" class="form-control" />
-                    <ValidationMessage For="() => Pet.Name" class="text-danger" />
                 </div>
                 <div class="mb-3">
                     <label for="breed" class="form-label">Breed:</label>
                     <InputText id="breed" @bind-Value="Pet.Breed" class="form-control" />
-                    <ValidationMessage For="() => Pet.Breed" class="text-danger" />
                 </div>
                 <div class="mb-3">
-                    <label for="age" class="form-label">Age:</label>
-                    <InputNumber id="age" @bind-Value="Pet.Age" class="form-control" />
-                    <ValidationMessage For="() => Pet.Age" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="gender" class="form-label">Gender:</label>
-                    <InputText id="gender" @bind-Value="Pet.Gender" class="form-control" />
-                    <ValidationMessage For="() => Pet.Gender" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="color" class="form-label">Color:</label>
-                    <InputText id="color" @bind-Value="Pet.Color" class="form-control" />
-                    <ValidationMessage For="() => Pet.Color" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="imageurl" class="form-label">ImageUrl:</label>
+                    <label for="imageurl" class="form-label">Image URL:</label>
                     <InputText id="imageurl" @bind-Value="Pet.ImageUrl" class="form-control" />
-                    <ValidationMessage For="() => Pet.ImageUrl" class="text-danger" />
                 </div>
                 <div class="mb-3">
                     <label for="description" class="form-label">Description:</label>
-                    <InputText id="description" @bind-Value="Pet.Description" class="form-control" />
-                    <ValidationMessage For="() => Pet.Description" class="text-danger" />
-                </div>
-
-                <div class="mb-3">
-                    <label for="shelterid" class="form-label">Shelter:</label>
-                    <InputSelect id="shelterid" @bind-Value="Pet.ShelterId" class="form-control">
-                        <option value="">-- Select Shelter --</option>
-                        @foreach (var shelter in Shelters)
-                        {
-                            <option value="@shelter.Id">@shelter.Name</option>
-                        }
-                    </InputSelect>
-                    <ValidationMessage For="() => Pet.ShelterId" class="text-danger" />
+                    <InputTextArea id="description" @bind-Value="Pet.Description" class="form-control" />
                 </div>
 
                 <button type="submit" class="btn btn-primary">Save</button>
+                <a href="/admin/pets" class="btn btn-secondary">Cancel</a>
             </EditForm>
         </div>
     </div>
 }
-
-<div>
-    <a href="/pets">Back to List</a>
-</div>
 
 @code {
     [SupplyParameterFromQuery]
@@ -93,49 +56,39 @@ else
     [SupplyParameterFromForm]
     private Pet? Pet { get; set; }
 
-    public List<Shelter> Shelters { get; set; } = new();
-
     protected override async Task OnInitializedAsync()
     {
-        // Load dropdown data
-        Shelters = Context.Shelters.ToList();
+        Pet ??= await Context.Pets.FirstOrDefaultAsync(m => m.Id == Id);
 
         if (Pet is null)
         {
-            Pet = await Context.Pets.FirstOrDefaultAsync(m => m.Id == Id);
-
-            if (Pet is null)
-            {
-                NavigationManager.NavigateTo("notfound");
-            }
+            NavigationManager.NavigateTo("notfound");
         }
     }
 
     private async Task UpdatePet()
     {
-        var petToUpdate = await Context.Pets.FirstOrDefaultAsync(p => p.Id == Pet!.Id);
-
-        if (petToUpdate == null)
+        if (Pet != null)
         {
-            NavigationManager.NavigateTo("notfound");
-            return;
+            Context.Attach(Pet).State = EntityState.Modified;
+            try
+            {
+                await Context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!PetExists(Pet.Id))
+                {
+                    NavigationManager.NavigateTo("notfound");
+                }
+                else
+                {
+                    throw;
+                }
+            }
+            NavigationManager.NavigateTo("/admin/pets");
         }
-
-        // Map fields
-        petToUpdate.Name = Pet.Name;
-        petToUpdate.Breed = Pet.Breed;
-        petToUpdate.Age = Pet.Age;
-        petToUpdate.Gender = Pet.Gender;
-        petToUpdate.Color = Pet.Color;
-        petToUpdate.ImageUrl = Pet.ImageUrl;
-        petToUpdate.Description = Pet.Description;
-        petToUpdate.ShelterId = Pet.ShelterId;
-
-        // Update User
-        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        petToUpdate.UpdatedBy = authState.User.Identity?.Name ?? "Unknown";
-
-        await Context.SaveChangesAsync();
-        NavigationManager.NavigateTo("/pets");
     }
+
+    private bool PetExists(int id) => Context.Pets.Any(e => e.Id == id);
 }
