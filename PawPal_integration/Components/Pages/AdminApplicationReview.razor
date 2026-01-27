@@ -1,0 +1,125 @@
+﻿@page "/admin/applications/review/{Id:int}"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using PawPal_integration.Domain
+@using PawPal_integration.Data
+@inject PawPalContext Context
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@attribute [Authorize(Roles = "Administrator")]
+
+<PageTitle>Review Application</PageTitle>
+
+<div class="container mt-4">
+    <a href="/admin/applications" class="btn btn-outline-secondary mb-3">&larr; Back to List</a>
+
+    @if (Application == null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else
+    {
+        <div class="card shadow">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <h3>Reviewing Application #@Application.Id</h3>
+                <span class="badge @GetStatusBadge(Application.Status)">@Application.Status</span>
+            </div>
+            <div class="card-body">
+
+                <div class="alert alert-info">
+                    <strong>Applicant:</strong> @Application.FullName <br />
+                    <strong>Applying For:</strong> @(Application.Pet?.Name ?? "Unknown Pet")
+                </div>
+
+                <div class="row">
+                    <div class="col-md-7">
+                        <h5>Application Details</h5>
+                        <table class="table table-bordered">
+                            <tr><th>Phone</th><td>@Application.PhoneNumber</td></tr>
+                            <tr><th>Address</th><td>@Application.Address</td></tr>
+                            <tr><th>Housing</th><td>@Application.HousingType</td></tr>
+                            <tr><th>Landlord Approval?</th><td>@(Application.HasLandlordOrFamilyApproval ? "Yes" : "No")</td></tr>
+                            <tr><th>Allergies?</th><td>@(Application.AnyoneAllergic ? "Yes" : "No")</td></tr>
+                            <tr><th>Reason</th><td>@Application.ReasonForAdoption</td></tr>
+                        </table>
+                    </div>
+
+                    <div class="col-md-5">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h5>Admin Decision</h5>
+                                <EditForm Model="Application" OnValidSubmit="UpdateStatus">
+
+                                    <div class="mb-3">
+                                        <label>Admin Remarks:</label>
+                                        <InputTextArea @bind-Value="Application.AdminRemarks" class="form-control" rows="4" placeholder="Enter notes here..." />
+                                    </div>
+
+                                    <div class="d-grid gap-2">
+                                        <button type="button" class="btn btn-success" @onclick='() => SetStatus("Approved")'>Approve Application</button>
+                                        <button type="button" class="btn btn-danger" @onclick='() => SetStatus("Rejected")'>Reject Application</button>
+                                    </div>
+
+                                </EditForm>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private AdoptionApplication? Application { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Application = await Context.AdoptionApplications
+            .Include(a => a.Pet)
+            .FirstOrDefaultAsync(a => a.Id == Id);
+
+        if (Application == null)
+        {
+            NavigationManager.NavigateTo("/admin/applications");
+        }
+    }
+
+    private async Task SetStatus(string newStatus)
+    {
+        if (Application == null) return;
+
+        // 1. Update Status
+        Application.Status = newStatus;
+
+        // 2. Audit Info
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        Application.ReviewedByAdminId = user.Identity?.Name ?? "Admin";
+        Application.ReviewedDateTime = DateTime.Now;
+
+        // 3. Save
+        await Context.SaveChangesAsync();
+
+        // 4. Redirect
+        NavigationManager.NavigateTo("/admin/applications");
+    }
+
+    // Just a placeholder for the form, actual logic is in SetStatus
+    private void UpdateStatus() { }
+
+    private string GetStatusBadge(string status)
+    {
+        return status switch
+        {
+            "Pending" => "bg-warning text-dark",
+            "Approved" => "bg-success",
+            "Rejected" => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+}

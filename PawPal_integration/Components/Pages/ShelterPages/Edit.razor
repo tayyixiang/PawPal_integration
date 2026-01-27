@@ -1,0 +1,110 @@
+﻿@page "/shelters/edit"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using PawPal_integration.Domain
+@using PawPal_integration.Data
+@inject PawPalContext Context
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@attribute [Authorize]
+
+<PageTitle>Edit Shelter</PageTitle>
+
+<h1>Edit</h1>
+
+<h4>Shelter</h4>
+<hr />
+@if (Shelter is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-4">
+            <EditForm method="post" Model="Shelter" OnValidSubmit="UpdateShelter" FormName="edit" Enhance>
+                <DataAnnotationsValidator />
+                <ValidationSummary role="alert" />
+
+                <input type="hidden" name="Shelter.Id" value="@Shelter.Id" />
+
+                <div class="mb-3">
+                    <label for="name" class="form-label">Name:</label>
+                    <InputText id="name" @bind-Value="Shelter.Name" class="form-control" />
+                    <ValidationMessage For="() => Shelter.Name" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="address" class="form-label">Address:</label>
+                    <InputText id="address" @bind-Value="Shelter.Address" class="form-control" />
+                    <ValidationMessage For="() => Shelter.Address" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="contactnumber" class="form-label">ContactNumber:</label>
+                    <InputText id="contactnumber" @bind-Value="Shelter.ContactNumber" class="form-control" />
+                    <ValidationMessage For="() => Shelter.ContactNumber" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="email" class="form-label">Email:</label>
+                    <InputText id="email" @bind-Value="Shelter.Email" class="form-control" />
+                    <ValidationMessage For="() => Shelter.Email" class="text-danger" />
+                </div>
+
+                <button type="submit" class="btn btn-primary">Save</button>
+            </EditForm>
+        </div>
+    </div>
+}
+
+<div>
+    <a href="/shelters">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    private int Id { get; set; }
+
+    [SupplyParameterFromForm]
+    private Shelter? Shelter { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Only load from DB if it's not a postback (first load)
+        if (Shelter is null)
+        {
+            Shelter = await Context.Shelters.FirstOrDefaultAsync(m => m.Id == Id);
+
+            if (Shelter is null)
+            {
+                NavigationManager.NavigateTo("notfound");
+            }
+        }
+    }
+
+    private async Task UpdateShelter()
+    {
+        // 1. Fetch the EXISTING record from DB to track it
+        var shelterToUpdate = await Context.Shelters.FirstOrDefaultAsync(s => s.Id == Shelter!.Id);
+
+        if (shelterToUpdate == null)
+        {
+            NavigationManager.NavigateTo("notfound");
+            return;
+        }
+
+        // 2. Update ONLY the fields we allow editing
+        shelterToUpdate.Name = Shelter.Name;
+        shelterToUpdate.Address = Shelter.Address;
+        shelterToUpdate.ContactNumber = Shelter.ContactNumber;
+        shelterToUpdate.Email = Shelter.Email;
+
+        // 3. Update Audit Trail (User)
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        shelterToUpdate.UpdatedBy = user.Identity?.Name ?? "Unknown";
+        // DateUpdated is handled automatically by DbContext
+
+        // 4. Save
+        await Context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/shelters");
+    }
+}

@@ -1,0 +1,130 @@
+﻿@page "/my-applications/{Id:int}"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using PawPal_integration.Data
+@using PawPal_integration.Domain
+@using PawPal_integration.Components.Layout
+
+@inject PawPalContext Db
+@inject AuthenticationStateProvider AuthStateProvider
+@inject UserManager<PawPalUser> UserManager
+@inject NavigationManager Nav
+
+<PageTitle>View Application</PageTitle>
+
+<div class="container-xl py-4">
+    <a class="text-decoration-none" href="/my-applications">← Back</a>
+
+    @if (Application == null)
+    {
+        <div class="text-muted mt-3">Loading...</div>
+    }
+    else
+    {
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mt-3">
+            <div>
+                <h1 class="mb-1" style="font-weight:800;">Application Details</h1>
+                <div class="text-muted">Submitted @Application.ApplicationDate.ToString("dd MMM yyyy, h:mm tt")</div>
+            </div>
+            <span class="badge rounded-pill px-3 py-2 @StatusBadge(Application.Status)">
+                @Application.Status
+            </span>
+        </div>
+
+        <div class="row g-4 mt-2">
+            <div class="col-12 col-lg-5">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h5 class="mb-1">@Pet?.Name</h5>
+                        <div class="text-muted small">
+                            @Pet?.Breed • Age @Pet?.Age
+                        </div>
+                        @if (!string.IsNullOrEmpty(Pet?.ImageUrl))
+                        {
+                            <img src="@Pet.ImageUrl" class="img-fluid rounded mt-3" style="max-height: 200px; object-fit: cover;" />
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-7">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h5 class="mb-3">Applicant Info</h5>
+
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <div class="text-muted small">Full Name</div>
+                                <div class="fw-semibold">@Application.FullName</div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <div class="text-muted small">Phone</div>
+                                <div class="fw-semibold">@Application.PhoneNumber</div>
+                            </div>
+                            <div class="col-12">
+                                <div class="text-muted small">Address</div>
+                                <div class="fw-semibold">@Application.Address</div>
+                            </div>
+
+                            <div class="col-12">
+                                <div class="text-muted small">Reason for Adopting</div>
+                                <div class="fw-semibold">@Application.ReasonForAdoption</div>
+                            </div>
+
+                            @if (!string.IsNullOrWhiteSpace(Application.AdminRemarks))
+                            {
+                                <div class="col-12 mt-3">
+                                    <div class="alert alert-secondary">
+                                        <div class="text-muted small"><strong>Admin Remarks:</strong></div>
+                                        <div>@Application.AdminRemarks</div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private AdoptionApplication? Application;
+    private Pet? Pet;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = await UserManager.GetUserAsync(auth.User);
+
+        if (user == null)
+        {
+            Nav.NavigateTo("/Account/Login", true);
+            return;
+        }
+
+        // Fetch Application and ensure it belongs to the logged-in user
+        Application = await Db.AdoptionApplications
+            .FirstOrDefaultAsync(a => a.Id == Id && a.AdopterId == user.Id);
+
+        if (Application == null)
+        {
+            // Application not found or doesn't belong to this user
+            Nav.NavigateTo("/my-applications");
+            return;
+        }
+
+        Pet = await Db.Pets.FirstOrDefaultAsync(p => p.Id == Application.PetId);
+    }
+
+    private string StatusBadge(string? status) => (status ?? "").ToLower() switch
+    {
+        "pending" => "bg-warning text-dark",
+        "approved" => "bg-success",
+        "rejected" => "bg-danger",
+        _ => "bg-secondary"
+    };
+}

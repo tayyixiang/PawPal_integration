@@ -1,0 +1,83 @@
+﻿@page "/shelters/delete"
+@using Microsoft.EntityFrameworkCore
+@using PawPal_integration.Domain
+@inject IDbContextFactory<PawPal_integration.Data.PawPalContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Delete</PageTitle>
+
+<h1>Delete</h1>
+
+<p>Are you sure you want to delete this?</p>
+<div>
+    <h2>Shelter</h2>
+    <hr />
+    @if (shelter is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else {
+        <dl class="row">
+            <dt class="col-sm-2">Name</dt>
+            <dd class="col-sm-10">@shelter.Name</dd>
+        </dl>
+        <dl class="row">
+            <dt class="col-sm-2">Address</dt>
+            <dd class="col-sm-10">@shelter.Address</dd>
+        </dl>
+        <dl class="row">
+            <dt class="col-sm-2">ContactNumber</dt>
+            <dd class="col-sm-10">@shelter.ContactNumber</dd>
+        </dl>
+        <dl class="row">
+            <dt class="col-sm-2">Email</dt>
+            <dd class="col-sm-10">@shelter.Email</dd>
+        </dl>
+        <dl class="row">
+            <dt class="col-sm-2">DateCreated</dt>
+            <dd class="col-sm-10">@shelter.DateCreated</dd>
+        </dl>
+        <dl class="row">
+            <dt class="col-sm-2">DateUpdated</dt>
+            <dd class="col-sm-10">@shelter.DateUpdated</dd>
+        </dl>
+        <dl class="row">
+            <dt class="col-sm-2">CreatedBy</dt>
+            <dd class="col-sm-10">@shelter.CreatedBy</dd>
+        </dl>
+        <dl class="row">
+            <dt class="col-sm-2">UpdatedBy</dt>
+            <dd class="col-sm-10">@shelter.UpdatedBy</dd>
+        </dl>
+        <EditForm method="post" Model="shelter" OnValidSubmit="DeleteShelter" FormName="delete" Enhance>
+            <button type="submit" class="btn btn-danger" disabled="@(shelter is null)">Delete</button> |
+            <a href="/shelters">Back to List</a>
+        </EditForm>
+    }
+</div>
+
+@code {
+    private Shelter? shelter;
+
+    [SupplyParameterFromQuery]
+    private int Id { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        shelter = await context.Shelters.FirstOrDefaultAsync(m => m.Id == Id);
+
+        if (shelter is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+
+    private async Task DeleteShelter()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Shelters.Remove(shelter!);
+        await context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/shelters");
+    }
+}

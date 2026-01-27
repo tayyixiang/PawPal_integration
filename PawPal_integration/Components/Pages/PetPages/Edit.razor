@@ -1,0 +1,141 @@
+﻿@page "/pets/edit"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using PawPal_integration.Domain
+@using PawPal_integration.Data
+@inject PawPalContext Context
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@attribute [Authorize]
+
+<PageTitle>Edit Pet</PageTitle>
+
+<h1>Edit</h1>
+
+<h4>Pet</h4>
+<hr />
+@if (Pet is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-4">
+            <EditForm method="post" Model="Pet" OnValidSubmit="UpdatePet" FormName="edit" Enhance>
+                <DataAnnotationsValidator />
+                <ValidationSummary role="alert" />
+
+                <input type="hidden" name="Pet.Id" value="@Pet.Id" />
+
+                <div class="mb-3">
+                    <label for="name" class="form-label">Name:</label>
+                    <InputText id="name" @bind-Value="Pet.Name" class="form-control" />
+                    <ValidationMessage For="() => Pet.Name" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="breed" class="form-label">Breed:</label>
+                    <InputText id="breed" @bind-Value="Pet.Breed" class="form-control" />
+                    <ValidationMessage For="() => Pet.Breed" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="age" class="form-label">Age:</label>
+                    <InputNumber id="age" @bind-Value="Pet.Age" class="form-control" />
+                    <ValidationMessage For="() => Pet.Age" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="gender" class="form-label">Gender:</label>
+                    <InputText id="gender" @bind-Value="Pet.Gender" class="form-control" />
+                    <ValidationMessage For="() => Pet.Gender" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="color" class="form-label">Color:</label>
+                    <InputText id="color" @bind-Value="Pet.Color" class="form-control" />
+                    <ValidationMessage For="() => Pet.Color" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="imageurl" class="form-label">ImageUrl:</label>
+                    <InputText id="imageurl" @bind-Value="Pet.ImageUrl" class="form-control" />
+                    <ValidationMessage For="() => Pet.ImageUrl" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="description" class="form-label">Description:</label>
+                    <InputText id="description" @bind-Value="Pet.Description" class="form-control" />
+                    <ValidationMessage For="() => Pet.Description" class="text-danger" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="shelterid" class="form-label">Shelter:</label>
+                    <InputSelect id="shelterid" @bind-Value="Pet.ShelterId" class="form-control">
+                        <option value="">-- Select Shelter --</option>
+                        @foreach (var shelter in Shelters)
+                        {
+                            <option value="@shelter.Id">@shelter.Name</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="() => Pet.ShelterId" class="text-danger" />
+                </div>
+
+                <button type="submit" class="btn btn-primary">Save</button>
+            </EditForm>
+        </div>
+    </div>
+}
+
+<div>
+    <a href="/pets">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    private int Id { get; set; }
+
+    [SupplyParameterFromForm]
+    private Pet? Pet { get; set; }
+
+    public List<Shelter> Shelters { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load dropdown data
+        Shelters = Context.Shelters.ToList();
+
+        if (Pet is null)
+        {
+            Pet = await Context.Pets.FirstOrDefaultAsync(m => m.Id == Id);
+
+            if (Pet is null)
+            {
+                NavigationManager.NavigateTo("notfound");
+            }
+        }
+    }
+
+    private async Task UpdatePet()
+    {
+        var petToUpdate = await Context.Pets.FirstOrDefaultAsync(p => p.Id == Pet!.Id);
+
+        if (petToUpdate == null)
+        {
+            NavigationManager.NavigateTo("notfound");
+            return;
+        }
+
+        // Map fields
+        petToUpdate.Name = Pet.Name;
+        petToUpdate.Breed = Pet.Breed;
+        petToUpdate.Age = Pet.Age;
+        petToUpdate.Gender = Pet.Gender;
+        petToUpdate.Color = Pet.Color;
+        petToUpdate.ImageUrl = Pet.ImageUrl;
+        petToUpdate.Description = Pet.Description;
+        petToUpdate.ShelterId = Pet.ShelterId;
+
+        // Update User
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        petToUpdate.UpdatedBy = authState.User.Identity?.Name ?? "Unknown";
+
+        await Context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/pets");
+    }
+}

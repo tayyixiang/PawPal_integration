@@ -1,0 +1,68 @@
+﻿@page "/appointments"
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Authorization
+@using PawPal_integration.Domain
+@using PawPal_integration.Data
+@inject PawPalContext Context
+@attribute [Authorize]
+
+<PageTitle>Index</PageTitle>
+
+<h1>Index</h1>
+
+<p>
+    <a href="appointments/create">Create New</a>
+</p>
+
+@if (Appointments == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Pet</th>
+                <th>Application ID</th>
+                <th>Created By</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Appointments)
+            {
+                <tr>
+                    <td>@item.AppointmentDate.ToShortDateString()</td>
+                    <td>@item.Status</td>
+                    <td>
+                        @(item.Pet != null ? item.Pet.Name : "Unknown Pet")
+                    </td>
+                    <td>
+                        @(item.AdoptionApplicationId.HasValue? item.AdoptionApplicationId.Value.ToString() : "N/A")
+                    </td>
+                    <td>@item.CreatedBy</td>
+                    <td>
+                        <a href="@($"appointments/edit?id={item.Id}")">Edit</a> |
+                        <a href="@($"appointments/details?id={item.Id}")">Details</a> |
+                        <a href="@($"appointments/delete?id={item.Id}")">Delete</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Appointment> Appointments;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Use .Include to fetch related Pet data
+        Appointments = await Context.Appointments
+            .Include(a => a.Pet)
+            .ToListAsync();
+    }
+}

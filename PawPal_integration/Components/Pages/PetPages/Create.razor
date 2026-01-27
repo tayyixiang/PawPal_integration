@@ -1,0 +1,113 @@
+﻿@page "/pets/create"
+@using Microsoft.AspNetCore.Authorization
+@using PawPal_integration.Domain
+@using PawPal_integration.Data
+@inject PawPalContext Context
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@attribute [Authorize]
+
+<PageTitle>Create Pet</PageTitle>
+
+<h1>Create</h1>
+
+<h4>Pet</h4>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <EditForm method="post" Model="Pet" OnValidSubmit="AddPet" FormName="create" Enhance>
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" role="alert" />
+
+            <div class="mb-3">
+                <label for="name" class="form-label">Name:</label>
+                <InputText id="name" @bind-Value="Pet.Name" class="form-control" />
+                <ValidationMessage For="() => Pet.Name" class="text-danger" />
+            </div>
+
+            <div class="mb-3">
+                <label for="breed" class="form-label">Breed:</label>
+                <InputText id="breed" @bind-Value="Pet.Breed" class="form-control" />
+                <ValidationMessage For="() => Pet.Breed" class="text-danger" />
+            </div>
+
+            <div class="mb-3">
+                <label for="age" class="form-label">Age:</label>
+                <InputNumber id="age" @bind-Value="Pet.Age" class="form-control" />
+                <ValidationMessage For="() => Pet.Age" class="text-danger" />
+            </div>
+
+            <div class="mb-3">
+                <label for="gender" class="form-label">Gender:</label>
+                <InputText id="gender" @bind-Value="Pet.Gender" class="form-control" />
+                <ValidationMessage For="() => Pet.Gender" class="text-danger" />
+            </div>
+
+            <div class="mb-3">
+                <label for="color" class="form-label">Color:</label>
+                <InputText id="color" @bind-Value="Pet.Color" class="form-control" />
+                <ValidationMessage For="() => Pet.Color" class="text-danger" />
+            </div>
+
+            <div class="mb-3">
+                <label for="imageurl" class="form-label">ImageUrl:</label>
+                <InputText id="imageurl" @bind-Value="Pet.ImageUrl" class="form-control" />
+                <ValidationMessage For="() => Pet.ImageUrl" class="text-danger" />
+            </div>
+
+            <div class="mb-3">
+                <label for="description" class="form-label">Description:</label>
+                <InputText id="description" @bind-Value="Pet.Description" class="form-control" />
+                <ValidationMessage For="() => Pet.Description" class="text-danger" />
+            </div>
+
+            <div class="mb-3">
+                <label for="shelterid" class="form-label">Shelter:</label>
+                <InputSelect id="shelterid" @bind-Value="Pet.ShelterId" class="form-control">
+                    <option value="">-- Select Shelter --</option>
+                    @foreach (var shelter in Shelters)
+                    {
+                        <option value="@shelter.Id">@shelter.Name</option>
+                    }
+                </InputSelect>
+                <ValidationMessage For="() => Pet.ShelterId" class="text-danger" />
+            </div>
+
+            <button type="submit" class="btn btn-primary">Create</button>
+        </EditForm>
+    </div>
+</div>
+
+<div>
+    <a href="/pets">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    public Pet Pet { get; set; } = new();
+
+    // List to hold shelters for the dropdown
+    public List<Shelter> Shelters { get; set; } = new();
+
+    protected override void OnInitialized()
+    {
+        // Load all shelters so the user can select one
+        Shelters = Context.Shelters.ToList();
+    }
+
+    public async Task AddPet()
+    {
+        // Get current user
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var userName = user.Identity?.Name ?? "Unknown";
+
+        // Set Audit fields
+        Pet.CreatedBy = userName;
+        Pet.UpdatedBy = userName;
+
+        Context.Pets.Add(Pet);
+        await Context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/pets");
+    }
+}

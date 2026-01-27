@@ -1,0 +1,78 @@
+﻿@page "/pets"
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Authorization
+@using PawPal_integration.Domain
+@using PawPal_integration.Data
+@inject PawPalContext Context
+@attribute [Authorize]
+
+<PageTitle>Index</PageTitle>
+
+<h1>Index</h1>
+
+<p>
+    <a href="pets/create">Create New</a>
+</p>
+
+@if (Pets == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Image</th>
+                <th>Name</th>
+                <th>Breed</th>
+                <th>Age</th>
+                <th>Gender</th>
+                <th>Color</th>
+                <th>Shelter</th>
+                <th>Created By</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var pet in Pets)
+            {
+                <tr>
+                    <td>
+                        <a class="btn btn-sm btn-success me-2" href="@($"apply?petId={pet.Id}")">Adopt</a>
+
+                        <a href="@($"pets/edit?id={pet.Id}")">Edit</a> |
+                        <a href="@($"pets/details?id={pet.Id}")">Details</a> |
+                        <a href="@($"pets/delete?id={pet.Id}")">Delete</a>
+                    </td>
+                    <td>@pet.Name</td>
+                    <td>@pet.Breed</td>
+                    <td>@pet.Age</td>
+                    <td>@pet.Gender</td>
+                    <td>@pet.Color</td>
+                    <td>
+                        @(pet.Shelter != null ? pet.Shelter.Name : "No Shelter")
+                    </td>
+                    <td>@pet.CreatedBy</td>
+                    <td>
+                        <a href="@($"pets/edit?id={pet.Id}")">Edit</a> |
+                        <a href="@($"pets/details?id={pet.Id}")">Details</a> |
+                        <a href="@($"pets/delete?id={pet.Id}")">Delete</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Pet> Pets;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // We use .Include to fetch the related Shelter data
+        Pets = await Context.Pets
+            .Include(p => p.Shelter)
+            .ToListAsync();
+    }
+}

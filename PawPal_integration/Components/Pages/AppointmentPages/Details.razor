@@ -1,0 +1,60 @@
+﻿@page "/appointments/details"
+@using Microsoft.EntityFrameworkCore
+@using PawPal_integration.Domain
+@inject IDbContextFactory<PawPal_integration.Data.PawPalContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Details</PageTitle>
+
+<h1>Details</h1>
+
+<div>
+    <h2>Appointment</h2>
+    <hr />
+    @if (appointment is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else {
+        <dl class="row">
+            <dt class="col-sm-2">AppointmentDate</dt>
+            <dd class="col-sm-10">@appointment.AppointmentDate</dd>
+            <dt class="col-sm-2">Status</dt>
+            <dd class="col-sm-10">@appointment.Status</dd>
+            <dt class="col-sm-2">PetId</dt>
+            <dd class="col-sm-10">@appointment.PetId</dd>
+            <dt class="col-sm-2">AdoptionApplicationId</dt>
+            <dd class="col-sm-10">@appointment.AdoptionApplicationId</dd>
+            <dt class="col-sm-2">DateCreated</dt>
+            <dd class="col-sm-10">@appointment.DateCreated</dd>
+            <dt class="col-sm-2">DateUpdated</dt>
+            <dd class="col-sm-10">@appointment.DateUpdated</dd>
+            <dt class="col-sm-2">CreatedBy</dt>
+            <dd class="col-sm-10">@appointment.CreatedBy</dd>
+            <dt class="col-sm-2">UpdatedBy</dt>
+            <dd class="col-sm-10">@appointment.UpdatedBy</dd>
+        </dl>
+        <div>
+            <a href="@($"/appointments/edit?id={appointment.Id}")">Edit</a> |
+            <a href="@($"/appointments")">Back to List</a>
+        </div>
+    }
+</div>
+
+@code {
+    private Appointment? appointment;
+
+    [SupplyParameterFromQuery]
+    private int Id { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        appointment = await context.Appointments.FirstOrDefaultAsync(m => m.Id == Id);
+
+        if (appointment is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+}

@@ -1,0 +1,89 @@
+﻿@page "/appointments/create"
+@using Microsoft.AspNetCore.Authorization
+@using PawPal_integration.Domain
+@using PawPal_integration.Data
+@inject PawPalContext Context
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@attribute [Authorize]
+
+<PageTitle>Create Appointment</PageTitle>
+
+<h1>Create</h1>
+
+<h4>Appointment</h4>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <EditForm method="post" Model="Appointment" OnValidSubmit="AddAppointment" FormName="create" Enhance>
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" role="alert" />
+
+            <div class="mb-3">
+                <label for="appointmentdate" class="form-label">Appointment Date:</label>
+                <InputDate id="appointmentdate" @bind-Value="Appointment.AppointmentDate" class="form-control" />
+                <ValidationMessage For="() => Appointment.AppointmentDate" class="text-danger" />
+            </div>
+
+            <div class="mb-3">
+                <label for="status" class="form-label">Status:</label>
+                <InputText id="status" @bind-Value="Appointment.Status" class="form-control" />
+                <ValidationMessage For="() => Appointment.Status" class="text-danger" />
+            </div>
+
+            <div class="mb-3">
+                <label for="petid" class="form-label">Pet:</label>
+                <InputSelect id="petid" @bind-Value="Appointment.PetId" class="form-control">
+                    <option value="">-- Select Pet --</option>
+                    @foreach (var pet in Pets)
+                    {
+                        <option value="@pet.Id">@pet.Name</option>
+                    }
+                </InputSelect>
+                <ValidationMessage For="() => Appointment.PetId" class="text-danger" />
+            </div>
+
+            <div class="mb-3">
+                <label for="adoptionapplicationid" class="form-label">Adoption Application ID (Optional):</label>
+                <InputNumber id="adoptionapplicationid" @bind-Value="Appointment.AdoptionApplicationId" class="form-control" />
+                <ValidationMessage For="() => Appointment.AdoptionApplicationId" class="text-danger" />
+            </div>
+
+            <button type="submit" class="btn btn-primary">Create</button>
+        </EditForm>
+    </div>
+</div>
+
+<div>
+    <a href="/appointments">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    public Appointment Appointment { get; set; } = new();
+
+    // List to hold pets for the dropdown
+    public List<Pet> Pets { get; set; } = new();
+
+    protected override void OnInitialized()
+    {
+        // Load pets for the dropdown
+        Pets = Context.Pets.ToList();
+    }
+
+    public async Task AddAppointment()
+    {
+        // Get current user
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var userName = user.Identity?.Name ?? "Unknown";
+
+        // Set Audit fields
+        Appointment.CreatedBy = userName;
+        Appointment.UpdatedBy = userName;
+
+        Context.Appointments.Add(Appointment);
+        await Context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/appointments");
+    }
+}

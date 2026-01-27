@@ -1,0 +1,117 @@
+﻿@page "/appointments/edit"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using PawPal_integration.Domain
+@using PawPal_integration.Data
+@inject PawPalContext Context
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@attribute [Authorize]
+
+<PageTitle>Edit Appointment</PageTitle>
+
+<h1>Edit</h1>
+
+<h4>Appointment</h4>
+<hr />
+@if (Appointment is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-4">
+            <EditForm method="post" Model="Appointment" OnValidSubmit="UpdateAppointment" FormName="edit" Enhance>
+                <DataAnnotationsValidator />
+                <ValidationSummary role="alert" />
+
+                <input type="hidden" name="Appointment.Id" value="@Appointment.Id" />
+
+                <div class="mb-3">
+                    <label for="appointmentdate" class="form-label">AppointmentDate:</label>
+                    <InputDate id="appointmentdate" @bind-Value="Appointment.AppointmentDate" class="form-control" />
+                    <ValidationMessage For="() => Appointment.AppointmentDate" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="status" class="form-label">Status:</label>
+                    <InputText id="status" @bind-Value="Appointment.Status" class="form-control" />
+                    <ValidationMessage For="() => Appointment.Status" class="text-danger" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="petid" class="form-label">Pet:</label>
+                    <InputSelect id="petid" @bind-Value="Appointment.PetId" class="form-control">
+                        <option value="">-- Select Pet --</option>
+                        @foreach (var pet in Pets)
+                        {
+                            <option value="@pet.Id">@pet.Name</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="() => Appointment.PetId" class="text-danger" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="adoptionapplicationid" class="form-label">AdoptionApplicationId (Optional):</label>
+                    <InputNumber id="adoptionapplicationid" @bind-Value="Appointment.AdoptionApplicationId" class="form-control" />
+                    <ValidationMessage For="() => Appointment.AdoptionApplicationId" class="text-danger" />
+                </div>
+
+                <button type="submit" class="btn btn-primary">Save</button>
+            </EditForm>
+        </div>
+    </div>
+}
+
+<div>
+    <a href="/appointments">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    private int Id { get; set; }
+
+    [SupplyParameterFromForm]
+    private Appointment? Appointment { get; set; }
+
+    public List<Pet> Pets { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Pets = Context.Pets.ToList();
+
+        if (Appointment is null)
+        {
+            Appointment = await Context.Appointments.FirstOrDefaultAsync(m => m.Id == Id);
+
+            if (Appointment is null)
+            {
+                NavigationManager.NavigateTo("notfound");
+            }
+        }
+    }
+
+    private async Task UpdateAppointment()
+    {
+        var apptToUpdate = await Context.Appointments.FirstOrDefaultAsync(a => a.Id == Appointment!.Id);
+
+        if (apptToUpdate == null)
+        {
+            NavigationManager.NavigateTo("notfound");
+            return;
+        }
+
+        // Map fields
+        apptToUpdate.AppointmentDate = Appointment.AppointmentDate;
+        apptToUpdate.Status = Appointment.Status;
+        apptToUpdate.PetId = Appointment.PetId;
+        apptToUpdate.AdoptionApplicationId = Appointment.AdoptionApplicationId;
+
+        // Update User
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        apptToUpdate.UpdatedBy = authState.User.Identity?.Name ?? "Unknown";
+
+        await Context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/appointments");
+    }
+}

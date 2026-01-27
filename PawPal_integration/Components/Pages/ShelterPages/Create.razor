@@ -1,0 +1,78 @@
+﻿@page "/shelters/create"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using PawPal_integration.Domain
+@using PawPal_integration.Data
+@inject PawPalContext Context
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@attribute [Authorize]
+
+<PageTitle>Create</PageTitle>
+
+<h1>Create</h1>
+
+<h4>Shelter</h4>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <EditForm method="post" Model="Shelter" OnValidSubmit="AddShelter" FormName="create" Enhance>
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" role="alert" />
+
+            <div class="mb-3">
+                <label for="name" class="form-label">Name:</label>
+                <InputText id="name" @bind-Value="Shelter.Name" class="form-control" />
+                <ValidationMessage For="() => Shelter.Name" class="text-danger" />
+            </div>
+
+            <div class="mb-3">
+                <label for="address" class="form-label">Address:</label>
+                <InputText id="address" @bind-Value="Shelter.Address" class="form-control" />
+                <ValidationMessage For="() => Shelter.Address" class="text-danger" />
+            </div>
+
+            <div class="mb-3">
+                <label for="contactnumber" class="form-label">ContactNumber:</label>
+                <InputText id="contactnumber" @bind-Value="Shelter.ContactNumber" class="form-control" />
+                <ValidationMessage For="() => Shelter.ContactNumber" class="text-danger" />
+            </div>
+
+            <div class="mb-3">
+                <label for="email" class="form-label">Email:</label>
+                <InputText id="email" @bind-Value="Shelter.Email" class="form-control" />
+                <ValidationMessage For="() => Shelter.Email" class="text-danger" />
+            </div>
+
+            <button type="submit" class="btn btn-primary">Create</button>
+        </EditForm>
+    </div>
+</div>
+
+<div>
+    <a href="/shelters">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    public Shelter Shelter { get; set; } = new();
+
+    public async Task AddShelter()
+    {
+        // 1. Get the current logged-in user
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var userName = user.Identity?.Name ?? "Unknown";
+
+        // 2. Set the "CreatedBy" and "UpdatedBy" fields manually
+        Shelter.CreatedBy = userName;
+        Shelter.UpdatedBy = userName;
+
+        // 3. Add to Database
+        // Note: DateCreated and DateUpdated are handled by PawPalContext.SaveChangesAsync()
+        Context.Shelters.Add(Shelter);
+        await Context.SaveChangesAsync();
+
+        NavigationManager.NavigateTo("/shelters");
+    }
+}

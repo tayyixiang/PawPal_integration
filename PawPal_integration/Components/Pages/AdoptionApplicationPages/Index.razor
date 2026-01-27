@@ -1,0 +1,60 @@
+﻿@page "/adoptionapplications"
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using PawPal_integration.Domain
+@using PawPal_integration.Data
+@implements IAsyncDisposable
+@inject IDbContextFactory<PawPal_integration.Data.PawPalContext> DbFactory
+
+<PageTitle>Index</PageTitle>
+
+<h1>Index</h1>
+
+<p>
+    <a href="adoptionapplications/create">Create New</a>
+</p>
+
+<QuickGrid Class="table" Items="context.AdoptionApplications">
+    <PropertyColumn Property="adoptionapplication => adoptionapplication.PetId" />
+    <PropertyColumn Property="adoptionapplication => adoptionapplication.AdopterId" />
+    <PropertyColumn Property="adoptionapplication => adoptionapplication.ReviewedByAdminId" />
+    <PropertyColumn Property="adoptionapplication => adoptionapplication.ApplicationDate" />
+    <PropertyColumn Property="adoptionapplication => adoptionapplication.Status" />
+    <PropertyColumn Property="adoptionapplication => adoptionapplication.Remarks" />
+    <PropertyColumn Property="adoptionapplication => adoptionapplication.FullName" />
+    <PropertyColumn Property="adoptionapplication => adoptionapplication.PhoneNumber" />
+    <PropertyColumn Property="adoptionapplication => adoptionapplication.Address" />
+    <PropertyColumn Property="adoptionapplication => adoptionapplication.HousingType" />
+    <PropertyColumn Property="adoptionapplication => adoptionapplication.HasLandlordOrFamilyApproval" />
+    <PropertyColumn Property="adoptionapplication => adoptionapplication.AnyoneAllergic" />
+    <PropertyColumn Property="adoptionapplication => adoptionapplication.AvgHoursAlone" />
+    <PropertyColumn Property="adoptionapplication => adoptionapplication.CurrentlyOwnPets" />
+    <PropertyColumn Property="adoptionapplication => adoptionapplication.CurrentPetsDetails" />
+    <PropertyColumn Property="adoptionapplication => adoptionapplication.PetExperienceDetails" />
+    <PropertyColumn Property="adoptionapplication => adoptionapplication.ReasonForAdoption" />
+    <PropertyColumn Property="adoptionapplication => adoptionapplication.PrimaryCaregiver" />
+    <PropertyColumn Property="adoptionapplication => adoptionapplication.PreparedForVetCare" />
+    <PropertyColumn Property="adoptionapplication => adoptionapplication.AdminRemarks" />
+    <PropertyColumn Property="adoptionapplication => adoptionapplication.ReviewedDateTime" />
+    <PropertyColumn Property="adoptionapplication => adoptionapplication.DateCreated" />
+    <PropertyColumn Property="adoptionapplication => adoptionapplication.DateUpdated" />
+    <PropertyColumn Property="adoptionapplication => adoptionapplication.CreatedBy" />
+    <PropertyColumn Property="adoptionapplication => adoptionapplication.UpdatedBy" />
+
+    <TemplateColumn Context="adoptionapplication">
+        <a href="@($"adoptionapplications/edit?id={adoptionapplication.Id}")">Edit</a> |
+        <a href="@($"adoptionapplications/details?id={adoptionapplication.Id}")">Details</a> |
+        <a href="@($"adoptionapplications/delete?id={adoptionapplication.Id}")">Delete</a>
+    </TemplateColumn>
+</QuickGrid>
+
+@code {
+    private PawPalContext context = default!;
+
+    protected override void OnInitialized()
+    {
+        context = DbFactory.CreateDbContext();
+    }
+
+    public async ValueTask DisposeAsync() => await context.DisposeAsync();
+}

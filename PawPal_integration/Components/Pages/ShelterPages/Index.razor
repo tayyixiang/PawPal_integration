@@ -1,0 +1,62 @@
+﻿@page "/shelters"
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Authorization
+@using PawPal_integration.Domain
+@using PawPal_integration.Data
+@inject PawPalContext Context
+@attribute [Authorize]
+
+<PageTitle>Index</PageTitle>
+
+<h1>Index</h1>
+
+<p>
+    <a href="shelters/create">Create New</a>
+</p>
+
+@if (Shelters == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Address</th>
+                <th>Contact</th>
+                <th>Email</th>
+                <th>Created By</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Shelters)
+            {
+                <tr>
+                    <td>@item.Name</td>
+                    <td>@item.Address</td>
+                    <td>@item.ContactNumber</td>
+                    <td>@item.Email</td>
+                    <td>@item.CreatedBy</td>
+                    <td>
+                        <a href="@($"shelters/edit?id={item.Id}")">Edit</a> |
+                        <a href="@($"shelters/details?id={item.Id}")">Details</a> |
+                        <a href="@($"shelters/delete?id={item.Id}")">Delete</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Shelter> Shelters;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Fetch all shelters simply and efficiently
+        Shelters = await Context.Shelters.ToListAsync();
+    }
+}
