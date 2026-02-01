@@ -1,53 +1,261 @@
 ﻿@page "/shelters/details"
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
 @using PawPal_integration.Domain
 @using PawPal_integration.Data
 @inject PawPalContext Context
-@inject NavigationManager NavigationManager
-@attribute [Authorize]
+@inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthStateProvider
 
-<PageTitle>Shelter Details</PageTitle>
+<PageTitle>@(Shelter?.Name ?? "Shelter") - Dashboard</PageTitle>
 
-<h1>Shelter Details</h1>
-
-<div>
-    <hr />
-    @if (Shelter is null)
+<div class="container py-4">
+    @if (Shelter == null)
     {
-        <p><em>Loading...</em></p>
+        <div class="alert alert-warning">Shelter not found.</div>
     }
     else
     {
-        <dl class="row">
-            <dt class="col-sm-2">Name</dt>
-            <dd class="col-sm-10">@Shelter.Name</dd>
-
-            <dt class="col-sm-2">Address</dt>
-            <dd class="col-sm-10">@Shelter.Address</dd>
-        </dl>
-        <div>
-            <AuthorizeView Roles="Administrator">
-                <a href="@($"shelters/edit?id={Shelter.Id}")">Edit</a> |
-            </AuthorizeView>
-            <a href="/shelters">Back to List</a>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="fw-bold mb-0">@Shelter.Name</h1>
+                <p class="text-muted"><i class="bi bi-geo-alt-fill me-1"></i>@Shelter.Address</p>
+            </div>
+            <a href="/shelters" class="btn btn-outline-secondary">Back to List</a>
         </div>
+
+        <AuthorizeView Roles="Administrator">
+            <Authorized>
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-white">
+                        <ul class="nav nav-tabs card-header-tabs">
+                            <li class="nav-item">
+                                <button class="nav-link @(ActiveTab == "overview" ? "active fw-bold" : "")"
+                                        @onclick='() => ActiveTab = "overview"'>
+                                    Overview
+                                </button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link @(ActiveTab == "pets" ? "active fw-bold" : "")"
+                                        @onclick='() => ActiveTab = "pets"'>
+                                    Manage Pets
+                                </button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link @(ActiveTab == "applications" ? "active fw-bold" : "")"
+                                        @onclick='() => ActiveTab = "applications"'>
+                                    Applications <span class="badge bg-danger rounded-pill ms-1">@PendingAppsCount</span>
+                                </button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link @(ActiveTab == "settings" ? "active fw-bold" : "")"
+                                        @onclick='() => ActiveTab = "settings"'>
+                                    Settings
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="card-body p-4">
+                        @if (ActiveTab == "overview")
+                        {
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <div class="p-3 border rounded bg-light text-center">
+                                        <h3 class="fw-bold">@Pets.Count</h3>
+                                        <span class="text-muted">Total Pets</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="p-3 border rounded bg-light text-center">
+                                        <h3 class="fw-bold">@PendingAppsCount</h3>
+                                        <span class="text-muted">Pending Reviews</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="p-3 border rounded bg-light text-center">
+                                        <h3 class="fw-bold">@AdoptedCount</h3>
+                                        <span class="text-muted">Happy Adoptions</span>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        else if (ActiveTab == "pets")
+                        {
+                            <div class="d-flex justify-content-between mb-3">
+                                <h5>Your Pets</h5>
+                                <a href="admin/pets/create" class="btn btn-primary btn-sm">+ Add New Pet</a>
+                            </div>
+                            <table class="table align-middle">
+                                <thead><tr><th>Name</th><th>Breed</th><th>Status</th><th>Actions</th></tr></thead>
+                                <tbody>
+                                    @foreach (var p in Pets)
+                                    {
+                                        <tr>
+                                            <td>@p.Name</td>
+                                            <td>@p.Breed</td>
+                                            <td>
+                                                <span class="badge @(p.AdoptionStatus == "Adopted" ? "bg-danger" : "bg-success")">
+                                                    @p.AdoptionStatus
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <a href="admin/pets/edit?id=@p.Id" class="btn btn-sm btn-outline-primary">Edit</a>
+                                                <a href="admin/pets/delete?id=@p.Id" class="btn btn-sm btn-outline-danger">Delete</a>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        }
+                        else if (ActiveTab == "applications")
+                        {
+                            <h5>Adoption Applications</h5>
+                            @if (!Applications.Any())
+                            {
+                                <p class="text-muted">No applications found for this shelter.</p>
+                            }
+                            else
+                            {
+                                <table class="table align-middle">
+                                    <thead><tr><th>Date</th><th>Pet</th><th>Applicant</th><th>Status</th><th></th></tr></thead>
+                                    <tbody>
+                                        @foreach (var app in Applications)
+                                        {
+                                            <tr>
+                                                <td>@app.ApplicationDate.ToShortDateString()</td>
+                                                <td>@app.Pet?.Name</td>
+                                                <td>@app.FullName</td>
+                                                <td>
+                                                    <span class="badge @(app.Status == "Pending" ? "bg-warning text-dark" : app.Status == "Approved" ? "bg-success" : "bg-danger")">
+                                                        @app.Status
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <a href="admin/applications/review/@app.Id" class="btn btn-sm btn-primary">Review</a>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            }
+                        }
+                        else if (ActiveTab == "settings")
+                        {
+                            <h5>Shelter Settings</h5>
+                            <hr />
+                            <EditForm Model="Shelter" OnValidSubmit="UpdateShelter" Context="editContext">
+                                <DataAnnotationsValidator />
+                                <div class="mb-3">
+                                    <label>Shelter Name</label>
+                                    <InputText @bind-Value="Shelter.Name" class="form-control" />
+                                </div>
+                                <div class="mb-3">
+                                    <label>Address / Location</label>
+                                    <InputText @bind-Value="Shelter.Address" class="form-control" />
+                                </div>
+                                <button type="submit" class="btn btn-success">Save Changes</button>
+                            </EditForm>
+
+                            <hr class="mt-5" />
+                            <div class="text-end">
+                                <p class="text-danger small">Danger Zone</p>
+                                <button class="btn btn-danger" @onclick="DeleteShelter">Delete Shelter Profile</button>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </Authorized>
+            <NotAuthorized>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card shadow-sm p-4 bg-light text-center">
+                            <i class="bi bi-house-heart fs-1 text-primary mb-2"></i>
+                            <h4 class="mb-3">About Us</h4>
+                            <p><strong>Location:</strong> <br /> @Shelter.Address</p>
+                            <hr />
+                            <p class="small text-muted">We are dedicated to finding loving homes for our pets.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-8">
+                        <h4 class="mb-3">Our Available Pets</h4>
+                        <div class="row g-3">
+                            @foreach (var p in Pets.Where(x => x.AdoptionStatus != "Adopted"))
+                            {
+                                <div class="col-md-6">
+                                    <div class="card h-100 shadow-sm">
+                                        <div class="card-body">
+                                            <h5 class="card-title">@p.Name</h5>
+                                            <p class="card-text text-muted">@p.Breed</p>
+                                            <a href="pets/@p.Id" class="btn btn-outline-success w-100">Meet @p.Name</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                            @if (!Pets.Any(x => x.AdoptionStatus != "Adopted"))
+                            {
+                                <div class="alert alert-info">No pets currently available for adoption here.</div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </NotAuthorized>
+        </AuthorizeView>
     }
 </div>
 
 @code {
-    private Shelter? Shelter;
+    [SupplyParameterFromQuery] public int Id { get; set; }
 
-    [SupplyParameterFromQuery]
-    private int Id { get; set; }
+    private Shelter? Shelter;
+    private List<Pet> Pets = new();
+    private List<AdoptionApplication> Applications = new();
+
+    private string ActiveTab = "overview";
+    private int PendingAppsCount = 0;
+    private int AdoptedCount = 0;
 
     protected override async Task OnInitializedAsync()
     {
-        Shelter = await Context.Shelters.FirstOrDefaultAsync(m => m.Id == Id);
+        // 1. Load Shelter
+        Shelter = await Context.Shelters.FirstOrDefaultAsync(s => s.Id == Id);
 
-        if (Shelter is null)
+        if (Shelter != null)
         {
-            NavigationManager.NavigateTo("notfound");
+            // 2. Load Pets specific to this Shelter
+            Pets = await Context.Pets.Where(p => p.ShelterId == Id).ToListAsync();
+
+            // 3. Load Applications linked to these pets
+            var petIds = Pets.Select(p => p.Id).ToList();
+            Applications = await Context.AdoptionApplications
+                .Include(a => a.Pet)
+                .Where(a => petIds.Contains(a.PetId))
+                .OrderByDescending(a => a.ApplicationDate)
+                .ToListAsync();
+
+            // 4. Calculate Stats
+            PendingAppsCount = Applications.Count(a => a.Status == "Pending");
+            AdoptedCount = Pets.Count(p => p.AdoptionStatus == "Adopted");
+        }
+    }
+
+    private async Task UpdateShelter()
+    {
+        if (Shelter != null)
+        {
+            Context.Shelters.Update(Shelter);
+            await Context.SaveChangesAsync();
+            ActiveTab = "overview";
+        }
+    }
+
+    private async Task DeleteShelter()
+    {
+        if (Shelter != null)
+        {
+            Context.Shelters.Remove(Shelter);
+            await Context.SaveChangesAsync();
+            Nav.NavigateTo("/shelters");
         }
     }
 }

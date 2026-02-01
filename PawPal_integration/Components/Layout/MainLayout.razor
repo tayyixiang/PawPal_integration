@@ -1,4 +1,11 @@
 ﻿@inherits LayoutComponentBase
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.Authorization
+@using PawPal_integration.Data
+@using PawPal_integration.Domain
+@inject PawPalContext Context
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
 
 <div class="page">
     <main>
@@ -13,22 +20,50 @@
                 <div class="collapse navbar-collapse" id="navbarCollapse">
                     <ul class="navbar-nav me-auto mb-2 mb-md-0">
                         <li class="nav-item">
-                            <a class="nav-link active" href="/">Home</a>
+                            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">Home</NavLink>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="/pets">Find a Pet</a>
+                            <NavLink class="nav-link" href="pets">Find a Pet</NavLink>
                         </li>
+
                         <li class="nav-item">
-                            <a class="nav-link" href="/shelters">Shelters</a>
+                            @if (IsAdmin && AdminShelterId > 0)
+                            {
+                                <NavLink class="nav-link text-warning fw-bold" href="@($"shelters/details?id={AdminShelterId}")">
+                                    <i class="bi bi-speedometer2 me-1"></i>Dashboard
+                                </NavLink>
+                            }
+                            else
+                            {
+                                <NavLink class="nav-link" href="shelters">Shelters</NavLink>
+                            }
                         </li>
+
+                        <AuthorizeView Roles="Administrator">
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    Admin Tools
+                                </a>
+                                <ul class="dropdown-menu" aria-labelledby="adminDropdown">
+                                    <li><a class="dropdown-item" href="admin/dashboard">System Stats</a></li>
+                                    <li><a class="dropdown-item" href="admin/applications">Review Applications</a></li>
+                                    <li><a class="dropdown-item" href="admin/pets">Manage Pets</a></li>
+                                </ul>
+                            </li>
+                        </AuthorizeView>
                     </ul>
-                    <div class="d-flex">
+
+                    <div class="d-flex align-items-center">
                         <AuthorizeView>
                             <Authorized>
+                                <a href="appointments" class="btn btn-link text-decoration-none me-2">Appointments</a>
                                 <a href="my-applications" class="btn btn-outline-primary me-2">My Applications</a>
-                                <form action="Account/Logout" method="post">
+                                <div class="vr mx-2"></div>
+                                <span class="text-muted me-2 small">Hi, @context.User.Identity?.Name</span>
+                                <form action="Account/Logout" method="post" class="d-inline">
                                     <AntiforgeryToken />
-                                    <button type="submit" class="btn btn-link nav-link">Logout</button>
+                                    <input type="hidden" name="ReturnUrl" value="" />
+                                    <button type="submit" class="btn btn-link nav-link text-danger p-0">Logout</button>
                                 </form>
                             </Authorized>
                             <NotAuthorized>
@@ -41,8 +76,10 @@
             </div>
         </nav>
 
-        <div class="content">
-            @Body
+        <div class="content py-4">
+            <div class="container">
+                @Body
+            </div>
         </div>
     </main>
 </div>
@@ -50,9 +87,37 @@
 <style>
     .page {
         flex-direction: column;
+        min-height: 100vh;
     }
+
     main {
         display: block !important; /* Overrides default Blazor sidebar flex */
         width: 100%;
     }
+
+    .navbar-toggler:focus {
+        box-shadow: none;
+    }
 </style>
+
+@code {
+    private bool IsAdmin = false;
+    private int AdminShelterId = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.IsInRole("Administrator"))
+        {
+            IsAdmin = true;
+            // Fetch the admin's shelter ID for the "Dashboard" link
+            var shelter = await Context.Shelters.FirstOrDefaultAsync();
+            if (shelter != null)
+            {
+                AdminShelterId = shelter.Id;
+            }
+        }
+    }
+}

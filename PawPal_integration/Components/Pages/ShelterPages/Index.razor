@@ -1,53 +1,55 @@
 ﻿@page "/shelters"
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
 @using PawPal_integration.Domain
 @using PawPal_integration.Data
 @inject PawPalContext Context
-@attribute [Authorize]
+@inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthStateProvider
 
 <PageTitle>Shelters</PageTitle>
 
-<h1>Shelters</h1>
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Our Shelters</h1>
+        <AuthorizeView Roles="Administrator">
+            <a href="shelters/create" class="btn btn-primary">+ Register New Shelter</a>
+        </AuthorizeView>
+    </div>
 
-<AuthorizeView Roles="Administrator">
-    <p>
-        <a href="shelters/create" class="btn btn-primary">Create New</a>
-    </p>
-</AuthorizeView>
-
-@if (Shelters == null)
-{
-    <p><em>Loading...</em></p>
-}
-else
-{
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Address</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
+    @if (Shelters == null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else if (!Shelters.Any())
+    {
+        <div class="alert alert-info">No shelters registered yet.</div>
+    }
+    else
+    {
+        <div class="row g-4">
             @foreach (var shelter in Shelters)
             {
-                <tr>
-                    <td>@shelter.Name</td>
-                    <td>@shelter.Address</td>
-                    <td>
-                        <a href="@($"shelters/details?id={shelter.Id}")">Details</a>
-                        <AuthorizeView Roles="Administrator">
-                            | <a href="@($"shelters/edit?id={shelter.Id}")">Edit</a> |
-                            <a href="@($"shelters/delete?id={shelter.Id}")">Delete</a>
-                        </AuthorizeView>
-                    </td>
-                </tr>
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title fw-bold">@shelter.Name</h5>
+                            <p class="card-text text-muted">
+                                <i class="bi bi-geo-alt-fill text-danger"></i> @shelter.Address
+                            </p>
+                        </div>
+                        <div class="card-footer bg-white border-0 text-end">
+                            <a href="shelters/details?id=@shelter.Id" class="btn btn-outline-primary">
+                                View Details
+                            </a>
+                        </div>
+                    </div>
+                </div>
             }
-        </tbody>
-    </table>
-}
+        </div>
+    }
+</div>
 
 @code {
     private List<Shelter> Shelters = new();
@@ -55,5 +57,17 @@ else
     protected override async Task OnInitializedAsync()
     {
         Shelters = await Context.Shelters.ToListAsync();
+
+        // --- THE FIX: AUTO-REDIRECT LOGIC ---
+        // If the user is an Admin, and shelters exist, go straight to the Dashboard (Details page).
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.IsInRole("Administrator") && Shelters.Any())
+        {
+            // Redirects to the first shelter found.
+            // In a real multi-tenant app, you'd filter Shelters.Where(s => s.OwnerId == userId)
+            Nav.NavigateTo($"shelters/details?id={Shelters[0].Id}");
+        }
     }
 }

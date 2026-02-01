@@ -1,4 +1,9 @@
 ﻿@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@using PawPal_integration.Data
+@using PawPal_integration.Domain
+@inject PawPalContext Context
+@inject AuthenticationStateProvider AuthStateProvider
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
@@ -21,10 +26,20 @@
                 <span class="bi bi-heart-fill-nav-menu" aria-hidden="true"></span> Find a Pet
             </NavLink>
         </div>
+
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="shelters">
-                <span class="bi bi-building-nav-menu" aria-hidden="true"></span> Shelters
-            </NavLink>
+            @if (IsAdmin && AdminShelterId > 0)
+            {
+                <NavLink class="nav-link" href="@($"shelters/details?id={AdminShelterId}")">
+                    <span class="bi bi-speedometer2-nav-menu" aria-hidden="true"></span> Shelter Dashboard
+                </NavLink>
+            }
+            else
+            {
+                <NavLink class="nav-link" href="shelters">
+                    <span class="bi bi-building-nav-menu" aria-hidden="true"></span> Shelters
+                </NavLink>
+            }
         </div>
 
         <AuthorizeView>
@@ -49,12 +64,12 @@
                 </div>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="admin/dashboard">
-                        <span class="bi bi-speedometer2-nav-menu" aria-hidden="true"></span> Dashboard
+                        <span class="bi bi-graph-up-nav-menu" aria-hidden="true"></span> System Stats
                     </NavLink>
                 </div>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="admin/applications">
-                        <span class="bi bi-inbox-fill-nav-menu" aria-hidden="true"></span> Applications
+                        <span class="bi bi-inbox-fill-nav-menu" aria-hidden="true"></span> All Applications
                     </NavLink>
                 </div>
                 <div class="nav-item px-3">
@@ -70,16 +85,53 @@
                 <span class="bi bi-person-fill-nav-menu" aria-hidden="true"></span> Account
             </NavLink>
         </div>
+
+        <AuthorizeView>
+            <Authorized>
+                <div class="nav-item px-3">
+                    <form action="Account/Logout" method="post">
+                        <AntiforgeryToken />
+                        <input type="hidden" name="ReturnUrl" value="" />
+                        <button type="submit" class="nav-link">
+                            <span class="bi bi-arrow-bar-left-nav-menu" aria-hidden="true"></span> Logout
+                        </button>
+                    </form>
+                </div>
+            </Authorized>
+            <NotAuthorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="Account/Login">
+                        <span class="bi bi-person-badge-nav-menu" aria-hidden="true"></span> Login
+                    </NavLink>
+                </div>
+            </NotAuthorized>
+        </AuthorizeView>
     </nav>
 </div>
 
 @code {
     private bool collapseNavMenu = true;
-
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+    private void ToggleNavMenu() => collapseNavMenu = !collapseNavMenu;
 
-    private void ToggleNavMenu()
+    // --- SMART LINK LOGIC ---
+    private bool IsAdmin = false;
+    private int AdminShelterId = 0;
+
+    protected override async Task OnInitializedAsync()
     {
-        collapseNavMenu = !collapseNavMenu;
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.IsInRole("Administrator"))
+        {
+            IsAdmin = true;
+            // Get the first available shelter to link to
+            var shelter = await Context.Shelters.FirstOrDefaultAsync();
+            if (shelter != null)
+            {
+                AdminShelterId = shelter.Id;
+            }
+        }
     }
 }

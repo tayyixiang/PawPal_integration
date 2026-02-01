@@ -3,8 +3,10 @@
 @using Microsoft.AspNetCore.Authorization
 @using PawPal_integration.Domain
 @using PawPal_integration.Data
+@using System.IO
 @inject PawPalContext Context
 @inject NavigationManager NavigationManager
+@inject IWebHostEnvironment WebEnvironment
 @attribute [Authorize(Roles = "Administrator")]
 
 <PageTitle>Edit Pet</PageTitle>
@@ -19,30 +21,63 @@
 else
 {
     <div class="row">
-        <div class="col-md-4">
+        <div class="col-md-6">
             <EditForm Method="Post" Model="Pet" OnValidSubmit="UpdatePet" FormName="edit" Enhance>
                 <DataAnnotationsValidator />
                 <ValidationSummary />
+
                 <input type="hidden" name="Pet.Id" value="@Pet.Id" />
 
                 <div class="mb-3">
-                    <label for="name" class="form-label">Name:</label>
-                    <InputText id="name" @bind-Value="Pet.Name" class="form-control" />
+                    <label class="form-label">Name:</label>
+                    <InputText @bind-Value="Pet.Name" class="form-control" />
                 </div>
                 <div class="mb-3">
-                    <label for="breed" class="form-label">Breed:</label>
-                    <InputText id="breed" @bind-Value="Pet.Breed" class="form-control" />
-                </div>
-                <div class="mb-3">
-                    <label for="imageurl" class="form-label">Image URL:</label>
-                    <InputText id="imageurl" @bind-Value="Pet.ImageUrl" class="form-control" />
-                </div>
-                <div class="mb-3">
-                    <label for="description" class="form-label">Description:</label>
-                    <InputTextArea id="description" @bind-Value="Pet.Description" class="form-control" />
+                    <label class="form-label">Breed:</label>
+                    <InputText @bind-Value="Pet.Breed" class="form-control" />
                 </div>
 
-                <button type="submit" class="btn btn-primary">Save</button>
+                <div class="mb-3">
+                    <label class="form-label">Current Photo:</label> <br />
+                    @if (!string.IsNullOrEmpty(Pet.ImageUrl))
+                    {
+                        <img src="@Pet.ImageUrl" width="100" class="img-thumbnail mb-2" />
+                    }
+                    else
+                    {
+                        <span class="text-muted">No image</span>
+                    }
+
+                    <label class="form-label d-block">Upload New Photo (Optional):</label>
+                    <InputFile OnChange="HandleFileSelected" class="form-control" accept=".jpg,.jpeg,.png" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Description:</label>
+                    <InputTextArea @bind-Value="Pet.Description" class="form-control" rows="4" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Status:</label>
+                    <InputSelect @bind-Value="Pet.AdoptionStatus" class="form-control">
+                        <option value="Available">Available</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Adopted">Adopted</option>
+                    </InputSelect>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Shelter:</label>
+                    <InputSelect @bind-Value="Pet.ShelterId" class="form-control">
+                        <option value="">-- Select --</option>
+                        @foreach (var s in Shelters)
+                        {
+                            <option value="@s.Id">@s.Name</option>
+                        }
+                    </InputSelect>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Save Changes</button>
                 <a href="/admin/pets" class="btn btn-secondary">Cancel</a>
             </EditForm>
         </div>
@@ -50,15 +85,20 @@ else
 }
 
 @code {
-    [SupplyParameterFromQuery]
-    private int Id { get; set; }
+    [SupplyParameterFromQuery] private int Id { get; set; }
+    [SupplyParameterFromForm] private Pet? Pet { get; set; }
 
-    [SupplyParameterFromForm]
-    private Pet? Pet { get; set; }
+    private List<Shelter> Shelters = new();
+    private IBrowserFile? uploadedFile;
 
     protected override async Task OnInitializedAsync()
     {
-        Pet ??= await Context.Pets.FirstOrDefaultAsync(m => m.Id == Id);
+        Shelters = await Context.Shelters.ToListAsync();
+
+        if (Pet is null)
+        {
+            Pet = await Context.Pets.FirstOrDefaultAsync(m => m.Id == Id);
+        }
 
         if (Pet is null)
         {
@@ -66,25 +106,40 @@ else
         }
     }
 
+    private void HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        uploadedFile = e.File;
+    }
+
     private async Task UpdatePet()
     {
         if (Pet != null)
         {
+            // Handle New File Upload
+            if (uploadedFile != null)
+            {
+                var folderPath = Path.Combine(WebEnvironment.WebRootPath, "images", "pets");
+                if (!Directory.Exists(folderPath)) Directory.CreateDirectory(folderPath);
+
+                var fileName = $"{Guid.NewGuid()}{Path.GetExtension(uploadedFile.Name)}";
+                var savePath = Path.Combine(folderPath, fileName);
+
+                await using var stream = new FileStream(savePath, FileMode.Create);
+                await uploadedFile.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024).CopyToAsync(stream);
+
+                Pet.ImageUrl = $"/images/pets/{fileName}";
+            }
+
             Context.Attach(Pet).State = EntityState.Modified;
+
             try
             {
                 await Context.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!PetExists(Pet.Id))
-                {
-                    NavigationManager.NavigateTo("notfound");
-                }
-                else
-                {
-                    throw;
-                }
+                if (!PetExists(Pet.Id)) NavigationManager.NavigateTo("notfound");
+                else throw;
             }
             NavigationManager.NavigateTo("/admin/pets");
         }

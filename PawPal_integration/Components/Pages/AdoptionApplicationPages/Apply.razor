@@ -8,50 +8,132 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @attribute [Authorize]
 
-<PageTitle>Apply</PageTitle>
+<PageTitle>Apply for Adoption</PageTitle>
 
 <div class="container mt-4">
     <div class="row justify-content-center">
         <div class="col-md-8">
-            <div class="card shadow">
-                <div class="card-header bg-primary text-white">Adoption Application</div>
-                <div class="card-body">
-                    <EditForm Model="Application" OnValidSubmit="SubmitApplication" FormName="applyForm">
-                        <DataAnnotationsValidator />
-                        <ValidationSummary class="text-danger" />
+            <div class="card shadow border-0">
+                <div class="card-header bg-primary text-white p-3">
+                    <h3 class="mb-0 fs-5"><i class="bi bi-pencil-square me-2"></i>Adoption Application</h3>
+                </div>
+                <div class="card-body p-4">
+                    @if (IsLoading)
+                    {
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status"></div>
+                            <p class="mt-2 text-muted">Checking eligibility...</p>
+                        </div>
+                    }
+                    else if (HasAlreadyApplied)
+                    {
+                        <div class="alert alert-warning text-center">
+                            <i class="bi bi-exclamation-circle fs-1 d-block mb-2"></i>
+                            <h4 class="alert-heading">Application Already Received!</h4>
+                            <p>You have already submitted an application for <strong>@Pet?.Name</strong>.</p>
+                            <hr>
+                            <div class="d-flex justify-content-center gap-2">
+                                <a href="/my-applications" class="btn btn-primary">View My Applications</a>
+                                <a href="/pets" class="btn btn-outline-dark">Browse Other Pets</a>
+                            </div>
+                        </div>
+                    }
+                    else if (Pet == null)
+                    {
+                        <div class="alert alert-danger">Pet not found.</div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info d-flex align-items-center">
+                            <i class="bi bi-info-circle-fill fs-4 me-3"></i>
+                            <div>
+                                <strong>Applying for:</strong> @Pet.Name (@Pet.Breed)
+                            </div>
+                        </div>
 
-                        <div class="mb-3">
-                            <label>Full Name</label>
-                            <InputText @bind-Value="Application.FullName" class="form-control" />
-                        </div>
-                        <div class="mb-3">
-                            <label>Phone</label>
-                            <InputText @bind-Value="Application.PhoneNumber" class="form-control" />
-                        </div>
-                        <div class="mb-3">
-                            <label>Address</label>
-                            <InputTextArea @bind-Value="Application.Address" class="form-control" />
-                        </div>
-                        <div class="mb-3">
-                            <label>Housing Type</label>
-                            <InputSelect @bind-Value="Application.HousingType" class="form-control">
-                                <option value="">Select...</option>
-                                <option value="HDB">HDB</option>
-                                <option value="Condo">Condo</option>
-                                <option value="Landed">Landed</option>
-                            </InputSelect>
-                        </div>
-                        <div class="mb-3">
-                            <label>Caregiver</label>
-                            <InputText @bind-Value="Application.PrimaryCaregiver" class="form-control" />
-                        </div>
-                        <div class="mb-3">
-                            <label>Reason</label>
-                            <InputTextArea @bind-Value="Application.ReasonForAdoption" class="form-control" />
-                        </div>
+                        <EditForm Model="Application" OnValidSubmit="SubmitApplication" FormName="applyForm">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary class="text-danger" />
 
-                        <button type="submit" class="btn btn-success w-100">Submit Application</button>
-                    </EditForm>
+                            <h5 class="mt-4 text-primary border-bottom pb-2">Contact Details</h5>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Full Name</label>
+                                    <InputText @bind-Value="Application.FullName" class="form-control" placeholder="John Doe" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Phone Number</label>
+                                    <InputText @bind-Value="Application.PhoneNumber" class="form-control" placeholder="+65 9123 4567" />
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Address</label>
+                                    <InputTextArea @bind-Value="Application.Address" class="form-control" rows="2" />
+                                </div>
+                            </div>
+
+                            <h5 class="mt-4 text-primary border-bottom pb-2">Home Environment</h5>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Housing Type</label>
+                                    <InputSelect @bind-Value="Application.HousingType" class="form-control">
+                                        <option value="">-- Select --</option>
+                                        <option value="HDB">HDB</option>
+                                        <option value="Condo">Condo</option>
+                                        <option value="Landed">Landed</option>
+                                        <option value="Rental">Rental</option>
+                                    </InputSelect>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Hours Pet Alone (Daily)</label>
+                                    <InputNumber @bind-Value="Application.AvgHoursAlone" class="form-control" />
+                                </div>
+                                <div class="col-12">
+                                    <div class="form-check">
+                                        <InputCheckbox @bind-Value="Application.HasLandlordOrFamilyApproval" class="form-check-input" id="approval" />
+                                        <label class="form-check-label" for="approval">I have approval from landlord/family</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <InputCheckbox @bind-Value="Application.AnyoneAllergic" class="form-check-input" id="allergy" />
+                                        <label class="form-check-label" for="allergy">Is anyone in the household allergic?</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <h5 class="mt-4 text-primary border-bottom pb-2">Pet Experience</h5>
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <InputCheckbox @bind-Value="Application.CurrentlyOwnPets" class="form-check-input" id="ownPets" />
+                                    <label class="form-check-label" for="ownPets">Do you currently own pets?</label>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Current Pets Details (if any)</label>
+                                <InputText @bind-Value="Application.CurrentPetsDetails" class="form-control" placeholder="E.g. 1 Dog, 2 Cats..." />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Previous Pet Experience</label>
+                                <InputTextArea @bind-Value="Application.PetExperienceDetails" class="form-control" rows="2" />
+                            </div>
+
+                            <h5 class="mt-4 text-primary border-bottom pb-2">Care Plan</h5>
+                            <div class="mb-3">
+                                <label class="form-label">Who will be the primary caregiver? <span class="text-danger">*</span></label>
+                                <InputText @bind-Value="Application.PrimaryCaregiver" class="form-control" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Why do you want to adopt?</label>
+                                <InputTextArea @bind-Value="Application.ReasonForAdoption" class="form-control" rows="3" />
+                            </div>
+                            <div class="form-check mb-4">
+                                <InputCheckbox @bind-Value="Application.PreparedForVetCare" class="form-check-input" id="vet" />
+                                <label class="form-check-label" for="vet">I am financially prepared for vet care & emergencies</label>
+                            </div>
+
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-success btn-lg shadow-sm">Submit Application</button>
+                            </div>
+                        </EditForm>
+                    }
                 </div>
             </div>
         </div>
@@ -59,26 +141,58 @@
 </div>
 
 @code {
-    [SupplyParameterFromQuery] public int PetId { get; set; }
-    [SupplyParameterFromForm] public AdoptionApplication Application { get; set; } = new();
+    [SupplyParameterFromQuery]
+    public int PetId { get; set; }
+
+    [SupplyParameterFromForm]
+    public AdoptionApplication Application { get; set; } = new();
+
+    public Pet? Pet { get; set; }
+    private bool IsLoading = true;
+    private bool HasAlreadyApplied = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // 1. Get User Info
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var userId = user.FindFirst(u => u.Type.Contains("nameidentifier"))?.Value;
+
+        // 2. Fetch Pet
+        Pet = await Context.Pets.FirstOrDefaultAsync(p => p.Id == PetId);
+
+        if (Pet != null && userId != null)
+        {
+            // 3. CHECK FOR DUPLICATES
+            HasAlreadyApplied = await Context.AdoptionApplications
+                .AnyAsync(a => a.AdopterId == userId && a.PetId == PetId);
+        }
+
+        IsLoading = false;
+    }
 
     private async Task SubmitApplication()
     {
-        var auth = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        var user = auth.User.Identity?.Name ?? "Unknown";
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var userId = user.FindFirst(u => u.Type.Contains("nameidentifier"))?.Value;
+        var userName = user.Identity?.Name ?? "Unknown";
 
-        // Manual Validation for required string fields
-        Application.PrimaryCaregiver ??= "Self";
-        Application.ReasonForAdoption ??= "Love pets";
-
+        // Fill System Fields
         Application.PetId = PetId;
-        Application.AdopterId = auth.User.FindFirst(u => u.Type.Contains("nameidentifier"))?.Value ?? user;
+        Application.AdopterId = userId ?? userName;
+        Application.ApplicationDate = DateTime.Now;
         Application.Status = "Pending";
-        Application.CreatedBy = user;
-        Application.UpdatedBy = user;
+        Application.CreatedBy = userName;
+        Application.UpdatedBy = userName;
+
+        // Ensure strings are not null
+        Application.CurrentPetsDetails ??= "";
+        Application.PetExperienceDetails ??= "";
 
         Context.AdoptionApplications.Add(Application);
         await Context.SaveChangesAsync();
+
         NavigationManager.NavigateTo("/my-applications");
     }
 }

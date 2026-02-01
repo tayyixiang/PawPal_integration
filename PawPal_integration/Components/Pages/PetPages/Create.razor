@@ -1,23 +1,24 @@
-﻿@page "/pets/create"
+﻿@page "/admin/pets/create"
+@using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Authorization
 @using PawPal_integration.Domain
 @using PawPal_integration.Data
+@using System.IO
 @inject PawPalContext Context
 @inject NavigationManager NavigationManager
-@inject AuthenticationStateProvider AuthenticationStateProvider
-@attribute [Authorize]
+@inject IWebHostEnvironment WebEnvironment
+@attribute [Authorize(Roles = "Administrator")]
 
 <PageTitle>Create Pet</PageTitle>
 
-<h1>Create</h1>
+<h1>Create Pet</h1>
 
-<h4>Pet</h4>
 <hr />
 <div class="row">
-    <div class="col-md-4">
-        <EditForm method="post" Model="Pet" OnValidSubmit="AddPet" FormName="create" Enhance>
+    <div class="col-md-6">
+        <EditForm Method="Post" Model="Pet" OnValidSubmit="AddPet" FormName="create" Enhance>
             <DataAnnotationsValidator />
-            <ValidationSummary class="text-danger" role="alert" />
+            <ValidationSummary class="text-danger" />
 
             <div class="mb-3">
                 <label for="name" class="form-label">Name:</label>
@@ -38,76 +39,99 @@
             </div>
 
             <div class="mb-3">
-                <label for="gender" class="form-label">Gender:</label>
-                <InputText id="gender" @bind-Value="Pet.Gender" class="form-control" />
-                <ValidationMessage For="() => Pet.Gender" class="text-danger" />
-            </div>
-
-            <div class="mb-3">
                 <label for="color" class="form-label">Color:</label>
                 <InputText id="color" @bind-Value="Pet.Color" class="form-control" />
                 <ValidationMessage For="() => Pet.Color" class="text-danger" />
             </div>
 
             <div class="mb-3">
-                <label for="imageurl" class="form-label">ImageUrl:</label>
-                <InputText id="imageurl" @bind-Value="Pet.ImageUrl" class="form-control" />
-                <ValidationMessage For="() => Pet.ImageUrl" class="text-danger" />
+                <label for="gender" class="form-label">Gender:</label>
+                <InputSelect id="gender" @bind-Value="Pet.Gender" class="form-control">
+                    <option value="">-- Select --</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                </InputSelect>
+                <ValidationMessage For="() => Pet.Gender" class="text-danger" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Pet Photo:</label>
+                <InputFile OnChange="HandleFileSelected" class="form-control" accept=".jpg,.jpeg,.png" />
+                @if (uploadedFile != null)
+                {
+                    <div class="mt-2">
+                        <small class="text-success">Selected: @uploadedFile.Name</small>
+                    </div>
+                }
             </div>
 
             <div class="mb-3">
                 <label for="description" class="form-label">Description:</label>
-                <InputText id="description" @bind-Value="Pet.Description" class="form-control" />
+                <InputTextArea id="description" @bind-Value="Pet.Description" class="form-control" rows="4" />
                 <ValidationMessage For="() => Pet.Description" class="text-danger" />
             </div>
 
             <div class="mb-3">
-                <label for="shelterid" class="form-label">Shelter:</label>
-                <InputSelect id="shelterid" @bind-Value="Pet.ShelterId" class="form-control">
+                <label for="shelter" class="form-label">Shelter:</label>
+                <InputSelect id="shelter" @bind-Value="Pet.ShelterId" class="form-control">
                     <option value="">-- Select Shelter --</option>
-                    @foreach (var shelter in Shelters)
+                    @foreach (var s in Shelters)
                     {
-                        <option value="@shelter.Id">@shelter.Name</option>
+                        <option value="@s.Id">@s.Name</option>
                     }
                 </InputSelect>
-                <ValidationMessage For="() => Pet.ShelterId" class="text-danger" />
             </div>
 
             <button type="submit" class="btn btn-primary">Create</button>
+            <a href="/admin/pets" class="btn btn-secondary">Back to List</a>
         </EditForm>
     </div>
 </div>
 
-<div>
-    <a href="/pets">Back to List</a>
-</div>
-
 @code {
     [SupplyParameterFromForm]
-    public Pet Pet { get; set; } = new();
+    private Pet Pet { get; set; } = new();
 
-    // List to hold shelters for the dropdown
-    public List<Shelter> Shelters { get; set; } = new();
+    private List<Shelter> Shelters = new();
+    private IBrowserFile? uploadedFile;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        // Load all shelters so the user can select one
-        Shelters = Context.Shelters.ToList();
+        Shelters = await Context.Shelters.ToListAsync();
     }
 
-    public async Task AddPet()
+    private void HandleFileSelected(InputFileChangeEventArgs e)
     {
-        // Get current user
-        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
-        var userName = user.Identity?.Name ?? "Unknown";
+        uploadedFile = e.File;
+    }
 
-        // Set Audit fields
-        Pet.CreatedBy = userName;
-        Pet.UpdatedBy = userName;
+    private async Task AddPet()
+    {
+        // 1. Handle Image Upload
+        if (uploadedFile != null)
+        {
+            // Ensure directory exists
+            var folderPath = Path.Combine(WebEnvironment.WebRootPath, "images", "pets");
+            if (!Directory.Exists(folderPath))
+            {
+                Directory.CreateDirectory(folderPath);
+            }
 
+            // Create unique filename
+            var fileName = $"{Guid.NewGuid()}{Path.GetExtension(uploadedFile.Name)}";
+            var savePath = Path.Combine(folderPath, fileName);
+
+            // Save file
+            await using var stream = new FileStream(savePath, FileMode.Create);
+            await uploadedFile.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024).CopyToAsync(stream); // Max 5MB
+
+            // Set DB Path
+            Pet.ImageUrl = $"/images/pets/{fileName}";
+        }
+
+        // 2. Save Pet
         Context.Pets.Add(Pet);
         await Context.SaveChangesAsync();
-        NavigationManager.NavigateTo("/pets");
+        NavigationManager.NavigateTo("/admin/pets");
     }
 }
