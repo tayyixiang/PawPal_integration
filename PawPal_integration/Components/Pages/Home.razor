@@ -1,106 +1,41 @@
 ﻿@page "/"
-@using Microsoft.EntityFrameworkCore
-@using PawPal_integration.Domain
-@using PawPal_integration.Data
-@using PawPal_integration.Components.Layout
-@inject PawPalContext Context
-@inject NavigationManager NavigationManager
 
-@layout MainLayout
+<PageTitle>Home</PageTitle>
 
-<PageTitle>Welcome to PawPal</PageTitle>
+<div class="text-center py-5 hero-banner text-white d-flex align-items-center justify-content-center"
+     style="background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('https://images.unsplash.com/photo-1450778865369-0994ca87d276?auto=format&fit=crop&w=1600&q=80'); background-size: cover; background-position: center; min-height: 500px; border-radius: 12px;">
 
-<div class="bg-light py-5 mb-5 text-center shadow-sm" style="background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('https://images.unsplash.com/photo-1450779300047-9999bbb0a1f2?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80'); background-size: cover; background-position: center; color: white;">
-    <div class="container py-5">
-        <h1 class="display-3 fw-bold">Find Your New Best Friend</h1>
-        <p class="lead mb-4">Give a loving home to a pet in need today.</p>
+    <div>
+        <h1 class="display-3 fw-bold">Welcome to PawPal</h1>
+        <p class="lead mb-4">Connecting loving families with pets in need.</p>
+        <a href="pets" class="btn btn-success btn-lg px-5 rounded-pill shadow">
+            Adopt a Friend Today
+        </a>
+    </div>
+</div>
 
-        <div class="row justify-content-center">
-            <div class="col-md-6">
-                <div class="input-group input-group-lg">
-                    <input type="text" class="form-control" placeholder="Search by name or breed..." @bind="SearchTerm" @onkeyup="HandleEnter">
-                    <button class="btn btn-primary" type="button" @onclick="SearchPets">Search</button>
-                </div>
+<div class="container mt-5">
+    <div class="row text-center g-4">
+        <div class="col-md-4">
+            <div class="p-4 bg-light rounded shadow-sm h-100">
+                <i class="bi bi-search fs-1 text-primary"></i>
+                <h3 class="mt-3">Browse</h3>
+                <p>Look through our list of available pets waiting for a home.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="p-4 bg-light rounded shadow-sm h-100">
+                <i class="bi bi-file-text fs-1 text-success"></i>
+                <h3 class="mt-3">Apply</h3>
+                <p>Submit an application and tell us about your living situation.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="p-4 bg-light rounded shadow-sm h-100">
+                <i class="bi bi-house-heart fs-1 text-danger"></i>
+                <h3 class="mt-3">Adopt</h3>
+                <p>Meet your new best friend and start your life together.</p>
             </div>
         </div>
     </div>
 </div>
-
-<div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="fw-bold text-dark">Recent Pets</h2>
-        <a href="/pets" class="text-decoration-none">View All &rarr;</a>
-    </div>
-
-    <div class="row">
-        @if (FeaturedPets == null)
-        {
-            <p>Loading...</p>
-        }
-        else if (!FeaturedPets.Any())
-        {
-            <p>No pets available yet.</p>
-        }
-        else
-        {
-            @foreach (var pet in FeaturedPets)
-            {
-                <div class="col-md-4 mb-4">
-                    <div class="card h-100 shadow-sm border-0">
-                        <div style="height: 250px; overflow: hidden; background-color: #f8f9fa;">
-                            @if (!string.IsNullOrEmpty(pet.ImageUrl))
-                            {
-                                <img src="@pet.ImageUrl" class="w-100 h-100" style="object-fit: cover;" alt="@pet.Name">
-                            }
-                            else
-                            {
-                                <div class="d-flex align-items-center justify-content-center h-100 text-muted">
-                                    No Image
-                                </div>
-                            }
-                        </div>
-
-                        <div class="card-body">
-                            <h5 class="card-title fw-bold">@pet.Name</h5>
-                            <p class="card-text text-muted">@pet.Breed • @pet.Age years old</p>
-                            <p class="card-text">@(pet.Description?.Length > 50 ? pet.Description.Substring(0, 50) + "..." : pet.Description)</p>
-                        </div>
-
-                        <div class="card-footer bg-white border-0 pb-3">
-                            <a href="apply?petId=@pet.Id" class="btn btn-success w-100">Adopt Me</a>
-                        </div>
-                    </div>
-                </div>
-            }
-        }
-    </div>
-</div>
-
-@code {
-    private List<Pet> FeaturedPets = new();
-    private string SearchTerm = "";
-
-    protected override async Task OnInitializedAsync()
-    {
-        // Load the 3 most recently added pets
-        FeaturedPets = await Context.Pets
-            .OrderByDescending(p => p.DateCreated)
-            .Take(3)
-            .ToListAsync();
-    }
-
-    private void SearchPets()
-    {
-        // Redirect to Pet List with search query (we will implement search on Index later if needed)
-        // For now, just go to the list
-        NavigationManager.NavigateTo("/pets");
-    }
-
-    private void HandleEnter(KeyboardEventArgs e)
-    {
-        if (e.Key == "Enter")
-        {
-            SearchPets();
-        }
-    }
-}

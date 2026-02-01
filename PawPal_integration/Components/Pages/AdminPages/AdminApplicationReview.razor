@@ -11,7 +11,7 @@
 <PageTitle>Review Application</PageTitle>
 
 <div class="container py-4">
-    <a href="/admin/applications" class="btn btn-outline-secondary mb-3">&larr; Back</a>
+    <a href="/admin/applications" class="btn btn-outline-secondary mb-3">&larr; Back to List</a>
 
     @if (App == null)
     {
@@ -22,37 +22,71 @@
         <div class="row">
             <div class="col-md-8">
                 <div class="card shadow-sm mb-4">
-                    <div class="card-header bg-light">
-                        <h5 class="mb-0">Applicant Details: @App.FullName</h5>
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Applicant: @App.FullName</h5>
+                        <span class="badge bg-info text-dark">Pet: @(App.Pet?.Name ?? "Unknown")</span>
                     </div>
                     <div class="card-body">
                         <dl class="row">
+                            <dt class="col-sm-4">Email/User</dt>
+                            <dd class="col-sm-8">@App.CreatedBy</dd>
+
                             <dt class="col-sm-4">Phone</dt>
                             <dd class="col-sm-8">@App.PhoneNumber</dd>
+
                             <dt class="col-sm-4">Housing</dt>
-                            <dd class="col-sm-8">@App.HousingType</dd>
-                            <dt class="col-sm-4">Reason</dt>
+                            <dd class="col-sm-8">@App.HousingType (Landlord Approval: @(App.HasLandlordOrFamilyApproval ? "Yes" : "No"))</dd>
+
+                            <dt class="col-sm-4">Pet Experience</dt>
+                            <dd class="col-sm-8">
+                                Owned Before: @(App.CurrentlyOwnPets ? "Yes" : "No") <br />
+                                <small class="text-muted">@App.PetExperienceDetails</small>
+                            </dd>
+
+                            <dt class="col-sm-4">Why Adopt?</dt>
                             <dd class="col-sm-8">@App.ReasonForAdoption</dd>
-                            <dt class="col-sm-4">Experience</dt>
-                            <dd class="col-sm-8">@App.PetExperienceDetails</dd>
                         </dl>
                     </div>
                 </div>
             </div>
+
             <div class="col-md-4">
-                <div class="card shadow-sm">
+                <div class="card shadow-sm sticky-top" style="top: 2rem;">
                     <div class="card-body">
-                        <h5>Decision</h5>
-                        <p class="text-muted">Current Status: <strong>@App.Status</strong></p>
+                        <h5 class="card-title">Decision</h5>
+                        <p class="mb-3">
+                            Current Status:
+                            <span class="fw-bold @(App.Status == "Approved" ? "text-success" : App.Status == "Rejected" ? "text-danger" : "text-warning")">
+                                @App.Status
+                            </span>
+                        </p>
+
+                        @if (App.Pet?.AdoptionStatus == "Adopted" && App.Status != "Approved")
+                        {
+                            <div class="alert alert-danger small">
+                                <strong>Warning:</strong> This pet has already been marked as 'Adopted'.
+                            </div>
+                        }
 
                         <div class="mb-3">
-                            <label>Admin Remarks</label>
-                            <textarea class="form-control" @bind="App.AdminRemarks"></textarea>
+                            <label class="form-label small text-muted">Admin Remarks</label>
+                            <textarea class="form-control" rows="3" @bind="App.AdminRemarks" placeholder="Internal notes..."></textarea>
                         </div>
 
                         <div class="d-grid gap-2">
-                            <button class="btn btn-success" @onclick='() => SetStatus("Approved")'>Approve</button>
-                            <button class="btn btn-danger" @onclick='() => SetStatus("Rejected")'>Reject</button>
+                            @if (App.Status == "Pending")
+                            {
+                                <button class="btn btn-success" @onclick='() => ProcessApplication("Approved")'>
+                                    <i class="bi bi-check-lg"></i> Approve Adoption
+                                </button>
+                                <button class="btn btn-danger" @onclick='() => ProcessApplication("Rejected")'>
+                                    <i class="bi bi-x-lg"></i> Reject
+                                </button>
+                            }
+                            else
+                            {
+                                <button class="btn btn-outline-secondary" disabled>Application Finalized</button>
+                            }
                         </div>
                     </div>
                 </div>
@@ -67,19 +101,32 @@
 
     protected override async Task OnInitializedAsync()
     {
-        App = await Context.AdoptionApplications.Include(a => a.Pet).FirstOrDefaultAsync(a => a.Id == Id);
+        App = await Context.AdoptionApplications
+            .Include(a => a.Pet)
+            .FirstOrDefaultAsync(a => a.Id == Id);
     }
 
-    private async Task SetStatus(string status)
+    private async Task ProcessApplication(string newStatus)
     {
         if (App == null) return;
-        App.Status = status;
+
+        // 1. Update Application Status
+        App.Status = newStatus;
 
         var authState = await Auth.GetAuthenticationStateAsync();
         App.ReviewedByAdminId = authState.User.Identity?.Name;
         App.ReviewedDateTime = DateTime.Now;
 
+        // 2. AUTOMATION: If Approved, Mark Pet as Adopted
+        if (newStatus == "Approved" && App.Pet != null)
+        {
+            App.Pet.AdoptionStatus = "Adopted";
+            Context.Pets.Update(App.Pet); // Explicitly track pet update
+        }
+
+        // 3. Save All Changes
         await Context.SaveChangesAsync();
+
         Nav.NavigateTo("/admin/applications");
     }
 }

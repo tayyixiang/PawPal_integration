@@ -9,28 +9,104 @@
 <PageTitle>Browse Pets</PageTitle>
 
 <div class="container py-4">
-    <h2>Find a Pet</h2>
-    <div class="row g-4 mt-2">
-        @if (Pets != null)
-        {
-            @foreach (var p in Pets)
+    <div class="page-header p-4 p-md-5 mb-4 text-center text-md-start">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+            <div>
+                <h1 class="mb-2 fw-bold">Browse Pets</h1>
+                <p class="text-muted mb-0">Find your perfect companion today.</p>
+            </div>
+
+            <div class="d-flex gap-2 w-100" style="max-width: 400px;">
+                <input type="text" class="form-control" placeholder="Search by name or breed..."
+                       @bind="SearchTerm" @bind:event="oninput" @onkeyup="FilterPets" />
+                <button class="btn btn-primary" @onclick="FilterPets">Search</button>
+            </div>
+        </div>
+    </div>
+
+    @if (FilteredPets == null)
+    {
+        <p class="text-muted">Loading...</p>
+    }
+    else if (!FilteredPets.Any())
+    {
+        <div class="alert alert-info text-center">
+            No pets found matching "<strong>@SearchTerm</strong>". <br />
+            <button class="btn btn-link" @onclick="ClearSearch">Show all pets</button>
+        </div>
+    }
+    else
+    {
+        <div class="row g-4">
+            @foreach (var p in FilteredPets)
             {
-                <div class="col-md-4">
-                    <div class="card h-100 shadow-sm">
-                        <img src="@(string.IsNullOrEmpty(p.ImageUrl) ? "https://placehold.co/400" : p.ImageUrl)" class="card-img-top" style="height: 250px; object-fit: cover;" />
+                <div class="col-12 col-sm-6 col-lg-4">
+                    <div class="card pet-card h-100 shadow-sm border-0">
+                        <div style="height: 250px; overflow: hidden; background-color: #f8f9fa;">
+                            <img class="w-100 h-100" style="object-fit: cover;"
+                                 src="@(string.IsNullOrEmpty(p.ImageUrl) ? "https://placehold.co/600x400?text=No+Image" : p.ImageUrl)"
+                                 alt="@p.Name" />
+                        </div>
                         <div class="card-body">
-                            <h5 class="card-title">@p.Name</h5>
-                            <p class="text-muted">@p.Breed</p>
-                            <a href="pets/@p.Id" class="btn btn-success w-100">View Details</a>
+                            <div class="d-flex justify-content-between align-items-start">
+                                <h5 class="mb-1 fw-bold text-dark">@p.Name</h5>
+                                @if (p.AdoptionStatus == "Adopted")
+                                {
+                                    <span class="badge bg-danger">Adopted</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-success">Available</span>
+                                }
+                            </div>
+
+                            <p class="text-muted small mb-2">@p.Breed</p>
+
+                            <p class="text-muted small mt-3">
+                                @(p.Description?.Length > 80 ? p.Description.Substring(0, 80) + "..." : p.Description)
+                            </p>
+                        </div>
+                        <div class="card-footer bg-white border-0 pb-3 px-3">
+                            <a class="btn btn-outline-success w-100 fw-semibold" href="@($"/pets/{p.Id}")">
+                                View Details
+                            </a>
                         </div>
                     </div>
                 </div>
             }
-        }
-    </div>
+        </div>
+    }
 </div>
 
 @code {
-    private List<Pet> Pets = new();
-    protected override async Task OnInitializedAsync() => Pets = await Context.Pets.ToListAsync();
+    private List<Pet> AllPets = new();
+    private List<Pet> FilteredPets = new();
+    private string SearchTerm = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        AllPets = await Context.Pets.ToListAsync();
+        FilteredPets = AllPets;
+    }
+
+    private void FilterPets()
+    {
+        if (string.IsNullOrWhiteSpace(SearchTerm))
+        {
+            FilteredPets = AllPets;
+        }
+        else
+        {
+            FilteredPets = AllPets
+                .Where(p => (p.Name?.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                            (p.Breed?.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) ?? false))
+                .ToList();
+        }
+    }
+
+    private void ClearSearch()
+    {
+        SearchTerm = "";
+        FilteredPets = AllPets;
+    }
 }

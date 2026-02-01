@@ -4,6 +4,8 @@ namespace PawPal_integration.Domain
 {
     public class Pet : BaseDomainModel
     {
+
+        public string? AdoptionStatus { get; set; } = "Available";
         public string? Name { get; set; }
 
         public string? Breed { get; set; }
